@@ -9,6 +9,8 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.Serializable;
+import javafx.beans.property.SimpleStringProperty;
+import javafx.beans.property.StringProperty;
 import javafx.scene.image.Image;
 
 /**
@@ -17,21 +19,21 @@ import javafx.scene.image.Image;
  */
 public class Knjiga implements Serializable {
     
-    private String bookName;
+    private StringProperty bookName;
     private String isbn;
     private String authorName;
     private int numberOfPages;
     private String summary;
     private String publisher;
-    private Image mainPage;
+    private String mainPage;
     private double cost;
     private int quantity;
     private String genre;
 
     public Knjiga(String bookName, String isbn, String authorName, int numberOfPages,
-                  String summary, String publisher, Image mainPage, double cost,
+                  String summary, String publisher, String mainPage, double cost,
                   int quantity, String genre) {
-        this.bookName = bookName;
+        this.bookName = new SimpleStringProperty(bookName);
         this.isbn = isbn;
         this.authorName = authorName;
         this.numberOfPages = numberOfPages;
@@ -43,11 +45,11 @@ public class Knjiga implements Serializable {
         this.genre = genre;
     }
     public String getBookName() {
-        return bookName;
+        return bookName.get();
     }
 
     public void setBookName(String bookName) {
-        this.bookName = bookName;
+        this.bookName.set(bookName);
     }
 
     public String getIsbn() {
@@ -94,12 +96,12 @@ public class Knjiga implements Serializable {
     }
 
 
-    public Image getMainPage() {
+    public String getMainPage() {
         return mainPage;
     }
 
 
-    public void setMainPage(Image mainPage) {
+    public void setMainPage(String mainPage) {
         this.mainPage = mainPage;
     }
 

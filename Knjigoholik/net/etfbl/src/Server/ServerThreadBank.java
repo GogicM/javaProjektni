@@ -13,6 +13,7 @@ import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.net.Socket;
+import java.util.HashMap;
 
 /**
  *
@@ -30,6 +31,7 @@ public class ServerThreadBank extends Thread {
 //            this.value = value;
 //        }
 //    }
+    public static final HashMap kursnaLista = new HashMap();
     public ServerThreadBank(Socket socket, int value) {
         this.socket = socket;
         this.value = value;
@@ -53,7 +55,7 @@ public class ServerThreadBank extends Thread {
             /*klijent posalje zahtjev, u vidu neke poruke, server ocita zahtjev, u zavisnosti od 
              same poruke izvrsi odredjenu akciju, i vrati klijentu odgovor*/
             // procitaj zahtjev
-            BufferedReader input = new BufferedReader(new FileReader("F:/Java/Gogic Milan 63-08/Knjigoholik/net/etfbl/src/Server/moneyBalance.txt"));          
+            BufferedReader input = new BufferedReader(new FileReader("src/Server/moneyBalance.txt"));          
             String request = in.readLine();
             if(userNameValidation(request)) {
                 System.out.println(request);
@@ -75,7 +77,7 @@ public class ServerThreadBank extends Thread {
     private synchronized String getAccountName(String username) {
         String c = "";
         try {
-            BufferedReader input = new BufferedReader(new FileReader("F:/Java/Gogic Milan 63-08/Knjigoholik/net/etfbl/src/Server/moneyBalance.txt"));
+            BufferedReader input = new BufferedReader(new FileReader("src/Server/moneyBalance.txt"));
             String s;
             while ((s = input.readLine()) != null) {
                 if(s.startsWith(username)) {
@@ -90,7 +92,7 @@ public class ServerThreadBank extends Thread {
     private synchronized String getAccountBalance(String username) {
         String c = "";
         try {
-            BufferedReader input = new BufferedReader(new FileReader("F:/Java/Gogic Milan 63-08/Knjigoholik/net/etfbl/src/Server/moneyBalance.txt"));
+            BufferedReader input = new BufferedReader(new FileReader("src/Server/moneyBalance.txt"));
             String s;
             while ((s = input.readLine()) != null) {
                 if (s.startsWith(username)) {
@@ -106,7 +108,7 @@ public class ServerThreadBank extends Thread {
     private synchronized String getAccountCurrency(String username) {
         String c = "";
         try {
-            BufferedReader input = new BufferedReader(new FileReader("F:/Java/Gogic Milan 63-08/Knjigoholik/net/etfbl/src/Server/moneyBalance.txt"));
+            BufferedReader input = new BufferedReader(new FileReader("src/Server/moneyBalance.txt"));
             String s;
             while ((s = input.readLine()) != null) {
                 if (s.startsWith(username)) {
@@ -121,7 +123,7 @@ public class ServerThreadBank extends Thread {
     }
     private synchronized boolean userNameValidation(String username) {
         try {
-            BufferedReader in = new BufferedReader(new FileReader("F:/Java/Gogic Milan 63-08/Knjigoholik/net/etfbl/src/Server/users.txt"));
+            BufferedReader in = new BufferedReader(new FileReader("src/Server/users.txt"));
             String s;
             while ((s = in.readLine()) != null) {
                 if (s.startsWith(username)) {

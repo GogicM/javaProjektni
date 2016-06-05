@@ -6,6 +6,7 @@
 package GUI;
 
 import Knjiga.Knjiga;
+import Knjiga.PisanaKnjiga;
 import Korisnik.Korisnik;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -14,6 +15,8 @@ import java.io.FileNotFoundException;
 import java.io.FilenameFilter;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.net.InetAddress;
@@ -24,14 +27,19 @@ import javafx.application.Application;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.value.ObservableValue;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.Label;
 import javafx.scene.control.Button;
+import javafx.scene.control.CheckBox;
+import javafx.scene.control.ContentDisplay;
 import javafx.scene.control.TextField;
 import javafx.scene.control.PasswordField;
+import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.scene.layout.GridPane;
@@ -40,10 +48,9 @@ import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import javafx.scene.text.Text;
 import javafx.stage.Stage;
-import javafx.scene.control.ContentDisplay;
-import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumnBuilder;
 import javafx.scene.control.TableViewBuilder;
+import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.image.ImageViewBuilder;
@@ -83,6 +90,9 @@ public class Knjigoholik extends Application {
     Button  back;
     Button accountInfo;
     Button backFromAccInfo;
+    Button backFromSearch;
+    Button buy;
+    Button rent;
     Stage stage;
     TableView table;
     //ovo ce ici drugacije, sad je probba
@@ -135,7 +145,7 @@ public class Knjigoholik extends Application {
         grid.add(hbox, 1, 4);
         //obrada dogadjaja
         //kada kliknemo na dugme za logovanje
-        //definisemo akciju koja ce se desiti
+        //definisemo akciju koja ce se desiti 
         signIn.setOnAction(new EventHandler<ActionEvent>() {
         @Override
         public void handle(ActionEvent event) {
@@ -146,16 +156,18 @@ public class Knjigoholik extends Application {
             // otvori socket prema drugom racunaru
             Socket sock = new Socket(addr, TCP_PORT);
             // inicijalizuj ulazni stream
-            BufferedReader in = new BufferedReader(new InputStreamReader(
-                    sock.getInputStream()));
-            // inicijalizuj izlazni stream
-            PrintWriter out = new PrintWriter(
-                    new BufferedWriter(new OutputStreamWriter(
-                                    sock.getOutputStream())), true);  
-            //slanje parametara za prijavu
-            out.println(textField.getText() + "#" + passwordField.getText());
+//            BufferedReader in = new BufferedReader(new InputStreamReader(
+//                    sock.getInputStream()));
+//            // inicijalizuj izlazni stream
+//            PrintWriter out = new PrintWriter(
+//                    new BufferedWriter(new OutputStreamWriter(
+//                                    sock.getOutputStream())), true);  
+//            //slanje parametara za prijavu
+            ObjectOutputStream out = new ObjectOutputStream(sock.getOutputStream());
+            ObjectInputStream in = new ObjectInputStream(sock.getInputStream());
+            out.writeObject("LOGIN" + "#" + textField.getText() + "#" + passwordField.getText());
                // System.out.println(in.readLine());
-            if("OK".equals(in.readLine())) {
+            if("OK".equals(in.readObject().toString())) {
                 //kad kreiram objekat klase Korisnik, umjesto za username i password posaljem prazan String
                 // ako se ispravno loguje, tek tada postavljam ta dva polja na osnovu teksta iz tekst i password polja
                 user.setUserName(textField.getText());
@@ -170,10 +182,8 @@ public class Knjigoholik extends Application {
                     }
                 in.close();
                 out.close();
-                sock.close();
-                
-                
-            }catch (IOException e1) {
+                sock.close();    
+            }catch (Exception e1) {
                     e1.printStackTrace();
                 }     
         }
@@ -204,6 +214,13 @@ public class Knjigoholik extends Application {
         HBox hbox1 = new HBox(10); 
         hbox1.getChildren().add(buttonSearch); //dodavanje dugmeta u hbox, stavljanje naziva, pozicioniranje
         gridMain.add(hbox1, 1, 4);
+        backFromSearch = new Button("Nazad"); //pravimo potrebnu dugmad
+        backFromSearch.setOnAction(e -> ButtonClicked(e));
+        buy = new Button("Kupi");
+        rent = new Button("Iznajmi");
+        backFromSearch.setLayoutX(10); //podesavamo pozicije
+        buy.setLayoutX(70);
+        rent.setLayoutX(120);
         buttonSearch.setOnAction(new EventHandler<ActionEvent>(){
         @Override
         public void handle(ActionEvent event){
@@ -212,10 +229,67 @@ public class Knjigoholik extends Application {
             //server trazi po zanru ili po naslovu
             //vraca rezultate
             //kada vrati, aktivira se nova scena koja ce sadrzavati tabelu sa knjigama
-            //check box za odabir kao i dugmad nazad i kupi
+            //check box za odabir kao i dugmad nazad,kupi i iznajmi
             //za sada samo 
-            stage.setScene(sceneMain);
-            search1.setText("PRETRAGAAAAAAAAAAAAA!");
+            try {
+                InetAddress addr = InetAddress.getByName("127.0.0.1");
+                Socket socket = new Socket(addr, TCP_PORT);
+                ObjectOutputStream oos = new ObjectOutputStream(socket.getOutputStream());
+                ObjectInputStream ois = new ObjectInputStream(socket.getInputStream());
+                
+                ArrayList<Knjiga> list = new ArrayList<>();
+                String request = searchBar.getText();
+                oos.writeObject("SEARCH" + "#" + request);
+                Knjiga[] knjige = (Knjiga[]) ois.readObject();
+                for(Knjiga k : knjige) {
+                    list.add(k);
+                }
+                TableView<Knjiga> table = new TableView<Knjiga>();
+                ObservableList<Knjiga> data =
+                FXCollections.observableArrayList(list);
+
+                TableColumn<Knjiga,String> nameCol = new TableColumn<Knjiga,String>("Naziv");
+                TableColumn<Knjiga,String> authorCol = new TableColumn<Knjiga,String>("Autor");
+                TableColumn<Knjiga,String> costCol = new TableColumn<Knjiga,String>("Cijena");
+                TableColumn<Knjiga,CheckBox> checkCol = new TableColumn<Knjiga,CheckBox>("");
+                table.setItems(data);
+                nameCol.setCellValueFactory(new PropertyValueFactory<Knjiga, String>("bookName"));
+                authorCol.setCellValueFactory(new PropertyValueFactory<Knjiga, String>("authorName"));
+                costCol.setCellValueFactory(new PropertyValueFactory<Knjiga, String>("cost"));
+                checkCol.setCellValueFactory(new PropertyValueFactory<Knjiga, CheckBox>(""));  
+                table.getColumns().setAll(nameCol, authorCol, costCol, checkCol);
+                oos.close();
+                ois.close();
+                socket.close();
+            } catch(Exception e) {
+                e.printStackTrace();
+            }
+//            TableView<Knjiga> table = new TableView<Knjiga>();
+            
+//            ObservableList<Knjiga> data =
+//            FXCollections.observableArrayList(
+//                    new PisanaKnjiga("Gozba za vrane -deo prvi", "978-86-743-6449-9", "Dzordz R.R. Martin",
+//                    362,"","Laguna", "src/GUI/Images/basara.jpg", 19.50 , 2, "epska fantastika, politicka strategija"));
+//        
+//            TableColumn<Knjiga,String> nameCol = new TableColumn<Knjiga,String>("Naziv");
+//            TableColumn<Knjiga,String> authorCol = new TableColumn<Knjiga,String>("Autor");
+//            TableColumn<Knjiga,String> costCol = new TableColumn<Knjiga,String>("Cijena");
+//            TableColumn<Knjiga,CheckBox> checkCol = new TableColumn<Knjiga,CheckBox>("");
+//            table.setItems(data);
+//            nameCol.setCellValueFactory(new PropertyValueFactory<Knjiga, String>("bookName"));
+//            authorCol.setCellValueFactory(new PropertyValueFactory<Knjiga, String>("authorName"));
+//            costCol.setCellValueFactory(new PropertyValueFactory<Knjiga, String>("cost"));
+//            checkCol.setCellValueFactory(new PropertyValueFactory<Knjiga, CheckBox>(""));  
+//            table.getColumns().setAll(nameCol, authorCol, costCol, checkCol);
+            AnchorPane root = new AnchorPane();
+            AnchorPane.setTopAnchor(table, 30.0);
+            AnchorPane.setLeftAnchor(table, 10.0);
+            AnchorPane.setRightAnchor(table, 10.0);
+            AnchorPane.setBottomAnchor(table, 10.0);
+            root.getChildren().add(table);
+            root.getChildren().addAll(backFromSearch, buy, rent);
+            sceneSearch = new Scene(root, 500, 300);
+            stage.setScene(sceneSearch);
         }
     });
 
@@ -309,7 +383,7 @@ public class Knjigoholik extends Application {
             pathColumn.setCellValueFactory(new Callback<TableColumn.CellDataFeatures<File, String>, ObservableValue<String>>() {
                 @Override
                 public ObservableValue<String> call(TableColumn.CellDataFeatures<File, String> p) {
-                   String summaryPath = "F:/Java/Gogic Milan 63-08/Knjigoholik/net/etfbl/src/Knjiga/Opis/";
+                   String summaryPath = "src/Knjiga/Opis/";
                    ArrayList<String> list = new ArrayList<>();
                    list.add("basara.txt");
                    list.add("buka.txt");
@@ -334,7 +408,7 @@ public class Knjigoholik extends Application {
 
     TableView<File> tableView = TableViewBuilder.<File>create().columns(imageColumn, pathColumn).columnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY).build();
 
-    String path = "F:/Java/Gogic Milan 63-08/Knjigoholik/net/etfbl/src/GUI/Images";
+    String path = "src/GUI/Images";
     File folder = new File(path);
     File[] files = folder.listFiles(new FilenameFilter() {
         @Override
@@ -376,10 +450,7 @@ public void ButtonClicked(ActionEvent e) {
     // 
     if (e.getSource() == catalogue) {
         stage.setScene(sceneTable);
-    } else if(e.getSource() == back) {
-        stage.setScene(sceneMain);
-    }
-    else if(e.getSource() == backFromAccInfo) {
+    } else if(e.getSource() == back || e.getSource() == backFromAccInfo || e.getSource() == backFromSearch) {
         stage.setScene(sceneMain);
     }
     else {
