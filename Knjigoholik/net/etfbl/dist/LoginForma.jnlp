@@ -8,7 +8,7 @@
   </information>
   <resources>
     <j2se version="1.6+" href="http://java.sun.com/products/autodl/j2se"/>
-    <jar href="LoginForma.jar" size="31553940" download="eager" />
+    <jar href="LoginForma.jar" size="8214780" download="eager" />
   </resources>
   <applet-desc  width="800" height="600" main-class="com.javafx.main.NoJavaFXFallback"  name="LoginForma" >
     <param name="requiredFXVersion" value="8.0+"/>

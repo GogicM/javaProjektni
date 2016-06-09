@@ -19,7 +19,11 @@ import javafx.scene.image.Image;
  */
 public class Knjiga implements Serializable {
     
-    private StringProperty bookName;
+   // private StringProperty bookName;
+    //ubacujem boolean zbog pravljenja checkbox a
+    private boolean checked;
+    private boolean isItAvailable;
+    private String bookName;
     private String isbn;
     private String authorName;
     private int numberOfPages;
@@ -30,10 +34,13 @@ public class Knjiga implements Serializable {
     private int quantity;
     private String genre;
 
-    public Knjiga(String bookName, String isbn, String authorName, int numberOfPages,
+    public Knjiga(boolean checked, boolean isItAvailable, String bookName, String isbn, String authorName, int numberOfPages,
                   String summary, String publisher, String mainPage, double cost,
                   int quantity, String genre) {
-        this.bookName = new SimpleStringProperty(bookName);
+     //   this.bookName = new SimpleStringProperty(bookName);
+        this.isItAvailable = isItAvailable;
+        this.checked = checked;
+        this.bookName = bookName;
         this.isbn = isbn;
         this.authorName = authorName;
         this.numberOfPages = numberOfPages;
@@ -44,14 +51,19 @@ public class Knjiga implements Serializable {
         this.quantity = quantity;
         this.genre = genre;
     }
+//    public String getBookName() {
+//        return bookName.get();
+//    }
+//
+//    public void setBookName(String bookName) {
+//        this.bookName.set(bookName);
+//    }
     public String getBookName() {
-        return bookName.get();
+        return bookName;
     }
-
     public void setBookName(String bookName) {
-        this.bookName.set(bookName);
+        this.bookName = bookName;
     }
-
     public String getIsbn() {
         return isbn;
     }
@@ -129,6 +141,27 @@ public class Knjiga implements Serializable {
     
     public String getGenre() {
         return genre;
+    }
+    
+    public boolean getChecked() {
+        return checked;
+    }
+    
+    public void setChecked(boolean checked) {
+        this.checked = checked;
+    }
+    
+    public boolean getIsItAvailable() {
+        return isItAvailable;
+    }
+    
+    public void setIsItAvailable(boolean isItAvailable) {
+        this.isItAvailable = isItAvailable;
+    }
+    
+    public String toString() {
+        return "AUTOR: " + getAuthorName() + "\nIZDAVAC:" + getPublisher() +
+                "\nNAZIV:" + getBookName() + "\nCIJENA: " + getCost();
     }
     //pomocna funkcija koja vrsi dodavanje teksta iz fajla u string
     // koristimo je u slucaju opisa kog citamo iz tekstualnog fajla

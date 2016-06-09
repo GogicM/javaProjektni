@@ -6,22 +6,21 @@
 package GUI;
 
 import Knjiga.Knjiga;
-import Knjiga.PisanaKnjiga;
 import Korisnik.Korisnik;
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.FilenameFilter;
 import java.io.IOException;
-import java.io.InputStreamReader;
+import java.io.InputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.io.OutputStreamWriter;
-import java.io.PrintWriter;
+import java.io.OutputStream;
 import java.net.InetAddress;
 import java.net.Socket;
 import java.util.ArrayList;
+import java.util.List;
 import javafx.geometry.Insets;
 import javafx.application.Application;
 import javafx.beans.property.SimpleObjectProperty;
@@ -33,6 +32,8 @@ import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
+import javafx.scene.control.Alert;
+import javafx.scene.control.Alert.AlertType;
 import javafx.scene.control.Label;
 import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
@@ -95,11 +96,19 @@ public class Knjigoholik extends Application {
     Button rent;
     Stage stage;
     TableView table;
+    public static ArrayList<Knjiga> fromServer = new ArrayList<>();
+    public static ArrayList<Knjiga> purchasedBooks = new ArrayList<>();
+    public static ArrayList<Knjiga> myCatalogue = new ArrayList<>();
     //ovo ce ici drugacije, sad je probba
     //Kako se kupi neka knjiga, onda ce se u ovu listu stavljati preko get metode iz maticne klase
     public static final int TCP_PORT = 9000;
     public static final int TCP_PORT_BANK = 9500;
-
+    public static <T> void refresh(final TableView<T> table, final List<T> tableList) { 
+        //Wierd JavaFX bug 
+        table.setItems(null); 
+        table.layout(); 
+        table.setItems(FXCollections.observableList(tableList)); 
+}    
     @Override
     public void start(Stage primaryStage) throws IOException, FileNotFoundException {
         //za usera postavljamo 0 stanje, kao i prazno korisnicko ime , valuta i sifra
@@ -156,13 +165,7 @@ public class Knjigoholik extends Application {
             // otvori socket prema drugom racunaru
             Socket sock = new Socket(addr, TCP_PORT);
             // inicijalizuj ulazni stream
-//            BufferedReader in = new BufferedReader(new InputStreamReader(
-//                    sock.getInputStream()));
-//            // inicijalizuj izlazni stream
-//            PrintWriter out = new PrintWriter(
-//                    new BufferedWriter(new OutputStreamWriter(
-//                                    sock.getOutputStream())), true);  
-//            //slanje parametara za prijavu
+            //slanje parametara za prijavu
             ObjectOutputStream out = new ObjectOutputStream(sock.getOutputStream());
             ObjectInputStream in = new ObjectInputStream(sock.getInputStream());
             out.writeObject("LOGIN" + "#" + textField.getText() + "#" + passwordField.getText());
@@ -185,11 +188,40 @@ public class Knjigoholik extends Application {
                 sock.close();    
             }catch (Exception e1) {
                     e1.printStackTrace();
-                }     
-        }
+                } 
+             
+                //za regulisanje kursne liste, pitati asistente
+//            Timer timer = new java.util.Timer();
+//
+//            timer.schedule(new TimerTask() {
+//                public void run() {
+//                    Platform.runLater(new Runnable() {
+//                        public void run() {
+//                            try {
+//                                InetAddress addr = InetAddress.getByName("127.0.0.1");
+//                                // otvori socket prema drugom racunaru
+//                                Socket sock = new Socket(addr, TCP_PORT_BANK);
+//                                // inicijalizuj ulazni stream
+//                                //slanje parametara za prijavu
+//                                ObjectOutputStream out = new ObjectOutputStream(sock.getOutputStream());
+//                                ObjectInputStream in = new ObjectInputStream(sock.getInputStream());
+//                                out.writeChars("courseList");
+//                                HashMap<String, Double> lista = new HashMap<String, Double>();
+//                                lista = (HashMap<String, Double>) in.readObject();
+                                  HBox hboxCourseList = new HBox();
+                                  TableView tableCourseList = new TableView();
+//                                stage.setScene(sceneMain);
+//                                System.out.println(lista.toString());
+//                            } catch(Exception e) {
+//                                e.printStackTrace();
+//                            }                        
+//                        }
+//                    });
+//                }
+//            }, 0, 20000);
+         }
         }); 
 
-        
         //elementi za drugi prozor, poslije logovanja
         search = new Label("Pretraga: ");
         //samo da ima nesto kad se klikne pretraga, kasnije cu obrisati
@@ -236,63 +268,165 @@ public class Knjigoholik extends Application {
                 Socket socket = new Socket(addr, TCP_PORT);
                 ObjectOutputStream oos = new ObjectOutputStream(socket.getOutputStream());
                 ObjectInputStream ois = new ObjectInputStream(socket.getInputStream());
-                
                 ArrayList<Knjiga> list = new ArrayList<>();
                 String request = searchBar.getText();
+                if(!request.equals("")) {
                 oos.writeObject("SEARCH" + "#" + request);
-                Knjiga[] knjige = (Knjiga[]) ois.readObject();
-                for(Knjiga k : knjige) {
-                    list.add(k);
+                fromServer.clear();
+                fromServer.addAll((ArrayList<Knjiga>) ois.readObject());
+                list.addAll(fromServer);
+                
+                AnchorPane root = new AnchorPane();
+                sceneSearch = new Scene(root, 500, 300);
+                if(fromServer.isEmpty()) {
+                    Alert alert = new Alert(AlertType.WARNING);
+                    alert.setTitle("Obavjestenje");
+                    alert.setHeaderText(null);
+                    alert.setContentText("Nemamo trazenu knjigu!");
+
+                    alert.showAndWait();
+
                 }
+
+              //  if(list.get(0) instanceof Knjiga) {
+                //sta reci, koju poruku poslati? Kome? :D
                 TableView<Knjiga> table = new TableView<Knjiga>();
                 ObservableList<Knjiga> data =
                 FXCollections.observableArrayList(list);
-
-                TableColumn<Knjiga,String> nameCol = new TableColumn<Knjiga,String>("Naziv");
-                TableColumn<Knjiga,String> authorCol = new TableColumn<Knjiga,String>("Autor");
-                TableColumn<Knjiga,String> costCol = new TableColumn<Knjiga,String>("Cijena");
-                TableColumn<Knjiga,CheckBox> checkCol = new TableColumn<Knjiga,CheckBox>("");
+                //koristimo ovo da se rasporedi prostor izmedju postojecih kolona
+                //ili ce od preostalog prostora napraviti jos jednu praznu kolonu
+                table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY); 
+                TableColumn<Knjiga, String> nameCol = new TableColumn<Knjiga, String>("Naziv");
+                TableColumn<Knjiga, String> authorCol = new TableColumn<Knjiga, String>("Autor");
+                TableColumn<Knjiga, String> costCol = new TableColumn<Knjiga, String>("Cijena");
+                Callback<TableColumn<Knjiga, Boolean>, TableCell<Knjiga, Boolean>> cellFactory;
+                TableColumn checkCol= new TableColumn<Knjiga, Boolean>();
+                
                 table.setItems(data);
                 nameCol.setCellValueFactory(new PropertyValueFactory<Knjiga, String>("bookName"));
+                nameCol.setMinWidth(150);
                 authorCol.setCellValueFactory(new PropertyValueFactory<Knjiga, String>("authorName"));
                 costCol.setCellValueFactory(new PropertyValueFactory<Knjiga, String>("cost"));
-                checkCol.setCellValueFactory(new PropertyValueFactory<Knjiga, CheckBox>(""));  
+                checkCol.setCellValueFactory(new PropertyValueFactory<Knjiga, Boolean>("checked"));                 
+                cellFactory = new Callback<TableColumn<Knjiga, Boolean>, TableCell<Knjiga, Boolean>>() {
+                @Override
+                public TableCell call(final TableColumn param) {
+                     final CheckBox checkBox = new CheckBox();
+                     final TableCell cell = new TableCell() {
+                    
+                    @Override
+                    public void updateItem(Object item, boolean empty) {
+                        super.updateItem(item, empty);
+                        if (item == null) {
+                            checkBox.setDisable(true);
+                            checkBox.setSelected(false);
+                        } else {
+                            checkBox.setDisable(false);
+                            checkBox.setSelected(item.equals(true) ? true : false);
+                            checkBox.setOnAction((event) -> { // sta se desava kada selektujemo checkbox
+                                if(checkBox.isSelected()) {
+                                    purchasedBooks.clear();
+                                    for(int i = 0; i < fromServer.size(); i++) {
+                                        fromServer.get(i).setChecked(true);
+                                        purchasedBooks.add(fromServer.get(i));
+                                        myCatalogue.add(purchasedBooks.get(i));
+                                        //umanjujemo broj dostupnih knjiga za jedan
+                                        purchasedBooks.get(i).setQuantity(purchasedBooks.get(i).getQuantity() - 1);
+                                    }
+                                  //  
+                                    }
+
+                            });
+                     //   commitEdit(checkBox.isSelected() ? true : false);
+                        }
+                    }
+                };
+                cell.setGraphic(checkBox);
+                return cell;
+            }
+        };     
+                // System.out.println(myCatalogue.get(0).toString());
+                checkCol.setCellValueFactory(new PropertyValueFactory("checked")); 
+                checkCol.setCellFactory(cellFactory);
+                AnchorPane.setTopAnchor(table, 30.0);
+                AnchorPane.setLeftAnchor(table, 10.0);
+                AnchorPane.setRightAnchor(table, 10.0);
+                AnchorPane.setBottomAnchor(table, 10.0);
+           //     refresh(table, data);
                 table.getColumns().setAll(nameCol, authorCol, costCol, checkCol);
+                root.getChildren().add(table);
+                root.getChildren().addAll(backFromSearch, buy, rent);
+                
+                stage.setScene(sceneSearch);  
+                
+                }
+                else {
+                    Alert alert = new Alert(AlertType.INFORMATION);
+                    alert.setTitle("Obavjestenje");
+                    alert.setHeaderText(null);
+                    alert.setContentText("Morate unijeti tekst za pretragu!");
+
+                    alert.showAndWait();
+                }
+
                 oos.close();
                 ois.close();
                 socket.close();
             } catch(Exception e) {
                 e.printStackTrace();
             }
-//            TableView<Knjiga> table = new TableView<Knjiga>();
-            
-//            ObservableList<Knjiga> data =
-//            FXCollections.observableArrayList(
-//                    new PisanaKnjiga("Gozba za vrane -deo prvi", "978-86-743-6449-9", "Dzordz R.R. Martin",
-//                    362,"","Laguna", "src/GUI/Images/basara.jpg", 19.50 , 2, "epska fantastika, politicka strategija"));
-//        
-//            TableColumn<Knjiga,String> nameCol = new TableColumn<Knjiga,String>("Naziv");
-//            TableColumn<Knjiga,String> authorCol = new TableColumn<Knjiga,String>("Autor");
-//            TableColumn<Knjiga,String> costCol = new TableColumn<Knjiga,String>("Cijena");
-//            TableColumn<Knjiga,CheckBox> checkCol = new TableColumn<Knjiga,CheckBox>("");
-//            table.setItems(data);
-//            nameCol.setCellValueFactory(new PropertyValueFactory<Knjiga, String>("bookName"));
-//            authorCol.setCellValueFactory(new PropertyValueFactory<Knjiga, String>("authorName"));
-//            costCol.setCellValueFactory(new PropertyValueFactory<Knjiga, String>("cost"));
-//            checkCol.setCellValueFactory(new PropertyValueFactory<Knjiga, CheckBox>(""));  
-//            table.getColumns().setAll(nameCol, authorCol, costCol, checkCol);
-            AnchorPane root = new AnchorPane();
-            AnchorPane.setTopAnchor(table, 30.0);
-            AnchorPane.setLeftAnchor(table, 10.0);
-            AnchorPane.setRightAnchor(table, 10.0);
-            AnchorPane.setBottomAnchor(table, 10.0);
-            root.getChildren().add(table);
-            root.getChildren().addAll(backFromSearch, buy, rent);
-            sceneSearch = new Scene(root, 500, 300);
-            stage.setScene(sceneSearch);
-        }
-    });
 
+        }
+
+    });
+        buy.setOnAction(new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent event) {
+                myCatalogue.addAll(purchasedBooks);
+
+                for(int i = 0; i < myCatalogue.size(); i++){
+                    if(myCatalogue.get(i).getIsItAvailable() && myCatalogue.get(i).getQuantity() > 0) {
+                        //pravimo direktorijum
+                        File f =new File("src/Knjigoholik/MojKatalog/" + user.getUserName());
+                        f.mkdirs();
+                        //umanjujemo kolicinu knjige za jedan
+                        myCatalogue.get(i).setQuantity(myCatalogue.get(i).getQuantity() - 1);
+                        //kopiramo u folder korisnika knjigu
+                        String dPath = "src/GUI/MojKatalog/" + user.getUserName()+"/";
+                        String sPath = "src/Server/knjige/" + myCatalogue.get(i).getBookName()+".txt";
+                         try {
+                             File source = new File(sPath);
+                             File destination = new File(dPath);
+                             copyFile(source, destination);
+                             } catch(IOException e) {
+                                    e.printStackTrace();
+                             }
+                         }
+                    }
+                
+                Alert alert = new Alert(AlertType.INFORMATION);
+                alert.setTitle("Obavjestenje");
+                alert.setHeaderText("KNJIGOHOLIK KAZE :");
+                alert.setContentText("Uspjesno ste kupili knjigu. Hvala na povjerenju!");
+
+                alert.showAndWait();
+                    }
+            
+        });
+        rent.setOnAction(new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent event) {
+                myCatalogue.addAll(purchasedBooks);
+                Alert alert = new Alert(AlertType.INFORMATION);
+                alert.setTitle("Obavjestenje");
+                alert.setHeaderText("KNJIGOHOLIK KAZE :");
+                alert.setContentText("Uspjesno ste iznajmili knjigu.");
+
+                alert.showAndWait();
+                //zakljucati knjigu
+            }
+        });
+      //  System.out.println( fromServer.get(0));
         //kreiranje dugmeta za prikaz mog kataloga
         catalogue = new Button("Moj katalog");
         catalogue.setOnAction(e -> ButtonClicked(e));
@@ -310,9 +444,9 @@ public class Knjigoholik extends Application {
         accountName = new Label();
         accountBalance = new Label();
         currency = new Label();
-        gridAccount.add(accountName, 0, 1);
-        gridAccount.add(accountBalance, 1, 1);
-        gridAccount.add(currency, 2, 1);       
+        gridAccount.add(accountName, 0, 3);
+        gridAccount.add(accountBalance, 0, 5);
+        gridAccount.add(currency, 0, 7);       
                
         accountInfo.setOnAction(new EventHandler<ActionEvent>() {
             @Override
@@ -324,25 +458,31 @@ public class Knjigoholik extends Application {
                     // otvori socket prema drugom racunaru
                     Socket sock1 = new Socket(addr1, TCP_PORT_BANK);
                     // inicijalizuj ulazni stream
-                    BufferedReader in1 = new BufferedReader(new InputStreamReader(
-                                            sock1.getInputStream()));
+                    ObjectInputStream in1 = new ObjectInputStream(sock1.getInputStream());
                     // inicijalizuj izlazni stream
-                    PrintWriter out1 = new PrintWriter(
-                                        new BufferedWriter(new OutputStreamWriter(
-                                            sock1.getOutputStream())), true);  
+                    ObjectOutputStream out1 = new ObjectOutputStream(sock1.getOutputStream());
                     //slanje parametara za prijavu
-                    System.out.println(user.getUserName());
-                    out1.println(user.getUserName());
-                    accountName.setText("NALOG: " + in1.readLine());
-                    //user.setAccountBalance(Double.parseDouble(in1.readLine())); //setujemo stanje na racunu za objekat user
-                    accountBalance.setText("\nStanje na racunu: " + in1.readLine());
-                    currency.setText("\nVALUTA: " + in1.readLine());
-                    user.setCurrency(in1.readLine()); //setujemo valutu za objekat user
+                    out1.writeObject(user.getUserName());
+                    //dobijamo sa servera korisnicko ime
+                    String accResponse = (String) in1.readObject();
+                    //postavljamo username za korisnika
+                    user.setUserName(accResponse);
+                    accountName.setText("NALOG: " + accResponse);
+                    //dobijamo sa servera stanje na racunu
+                    accResponse = (String) in1.readObject();
+                    accountBalance.setText("STANJE NA RACUNU: " + accResponse);
+                    //postavljamo za korisnika stanje na racunu dobijeno sa servera
+                    user.setAccountBalance(Double.parseDouble(accResponse));
+                    //saljemo zahtjev da bi dobili valutu
+                    accResponse = (String) in1.readObject();
+                    currency.setText("VALUTA: " + accResponse);
+                    //postavjlamo valutu za korisnika
+                    user.setCurrency(accResponse);
                     stage.setScene(sceneAccount);
                     in1.close();
                     out1.close();
                     sock1.close();
-                    } catch (IOException e1) {
+                    } catch (Exception e1) {
                         e1.printStackTrace();
                     }
             }
@@ -396,7 +536,6 @@ public class Knjigoholik extends Application {
                    {    
                         String path1 = summaryPath + list.get(i);
                         file = new File(path1);
-                        System.out.println(file);
                         string = Knjiga.fromFileToString(file);
                    }
 
@@ -457,7 +596,25 @@ public void ButtonClicked(ActionEvent e) {
         stage.setScene(sceneFirst);
     }
 }
-    
+
+ 
+private static void copyFile(File source, File dest)
+		throws IOException {
+	InputStream input = null;
+	OutputStream output = null;
+	try {
+		input = new FileInputStream(source);
+		output = new FileOutputStream(dest);
+		byte[] buf = new byte[1024];
+		int bytesRead;
+		while ((bytesRead = input.read(buf)) > 0) {
+			output.write(buf, 0, bytesRead);
+                }
+		} catch(IOException e) {
+                        e.printStackTrace();
+                        }
+	
+}
     /**
      * @param args the command line arguments
      */

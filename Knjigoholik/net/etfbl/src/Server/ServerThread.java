@@ -19,23 +19,17 @@ import javafx.scene.image.Image;
  */
 public class ServerThread extends Thread {
     
-    private ObjectOutputStream oos;
+    private ObjectOutputStream oos;    
     private ObjectInputStream ois;
-
+    //lista knjiga trazenih od korisnika prilikom pretrage
+    ArrayList<Knjiga> lista = new ArrayList<>();
+    //lista knjiga za trazenih za iznajmljivanje
+    ArrayList<Knjiga> forRent = new ArrayList<>();
     
     public ServerThread(Socket sock, int value) {
         this.sock = sock;
         this.value = value;
         try {
-            // inicijalizuj ulazni stream
-//            in = new BufferedReader(
-//                    new InputStreamReader(
-//                            sock.getInputStream()));
-//            // inicijalizuj izlazni stream
-//            out = new PrintWriter(
-//                    new BufferedWriter(
-//                            new OutputStreamWriter(
-//                                    sock.getOutputStream())), true);
             oos = new ObjectOutputStream(sock.getOutputStream());
             ois = new ObjectInputStream(sock.getInputStream());
         } catch (Exception ex) {
@@ -50,10 +44,11 @@ public class ServerThread extends Thread {
             /*klijent posalje zahtjev, u vidu neke poruke, server ocita zahtjev, u zavisnosti od 
              same poruke izvrsi odredjenu akciju, i vrati klijentu odgovor*/
             // procitaj zahtjev
-            String login = (String)ois.readObject();
-            do {
-            if(login.startsWith("LOGIN")){
-                String[] loginElements = login.split("#");
+            String request = (String)ois.readObject();
+            
+            if(request.startsWith("LOGIN")){
+                String[] loginElements = request.split("#");
+                System.out.println(request);
                 if (loginValidation(loginElements[1], loginElements[2])) {
                     oos.writeObject("OK");
                 } else {
@@ -61,27 +56,31 @@ public class ServerThread extends Thread {
                 }
             }
             //obrada zahtjeva za pretragu knjige
-            String request = (String) ois.readObject();
-            System.out.println(request);
-            if(request.startsWith("SEARCH")) {
-            System.out.println(request);
-            String[] s = request.split("#");
-            for(Knjiga k : Server.listaKnjiga) {
-                if(s[1].equals(k.getAuthorName()) || s[2].startsWith(k.getGenre()) || s[2].endsWith(k.getGenre())) {
-                    oos.writeObject(k);
-                    oos.flush();
-                }
-                else {
-                    oos.writeObject("Nema trazene knjige");
-                }
-            }
-            }
-            else { oos.writeObject("Greska!"); }
-            } while(!"KRAJ".equals(login));
 
-            // zatvori konekciju
-      //      in.close();
-        //    out.close();
+            
+            if(request.startsWith("SEARCH")) {
+                String[] s = request.split("#");
+            for(Knjiga k : Server.listaKnjiga) { //for petljom kroz listu knjiga
+                if(s[1].equals(k.getAuthorName()) || k.getAuthorName().startsWith(s[1]) || //provejra da li u listi ima knjige
+                        k.getAuthorName().endsWith(s[1]) || s[1].equals(k.getBookName()) ||//od unesenog autora
+                         k.getBookName().startsWith(s[1]) || s[1].equals(k.getGenre()) || // zanra, ili naziva...
+                                k.getGenre().startsWith(s[1]) || k.getGenre().endsWith(s[1])) { //&&!s[2].equals(null) || s[2].startsWith(k.getGenre()) || s[2].endsWith(k.getGenre())) {
+                    lista.add(k); 
+                    System.out.println(k.getGenre());
+                    System.out.println(lista.get(0).toString());
+                }
+                }
+            if(!lista.isEmpty()) {
+             oos.writeObject(lista);
+             oos.flush();
+            }
+            else {
+                oos.writeObject(null);
+            }
+            }
+//            if(request.startsWith("RENT")) {
+//                
+//            }
             oos.close();
             ois.close();
             sock.close();
@@ -90,6 +89,9 @@ public class ServerThread extends Thread {
             ex.printStackTrace();
         }
     }
+    //pomocna metoda koja provjerava da li su dobri podaci za logovanje
+    //cita podatke iz fajla, pravi odvojene stringove od username a i passworda 
+    //i provjerava da su jednaki sa username i password koji su poslani sa klijentske strane
     private synchronized boolean loginValidation(String username, String password) {
         try {
             BufferedReader in = new BufferedReader(new FileReader("src/Server/users.txt"));
@@ -112,6 +114,5 @@ public class ServerThread extends Thread {
     private Socket sock;
     //redni broj klijenta
     private int value;
-    private BufferedReader in;
-    private PrintWriter out;
+
 }

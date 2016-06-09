@@ -13,10 +13,10 @@ import javafx.scene.image.Image;
  */
 public class PisanaKnjiga extends Knjiga {
     
-    public PisanaKnjiga(String bookName, String isbn, String authorName, int numberOfPages,
+    public PisanaKnjiga(boolean checked,boolean isItAvailable, String bookName, String isbn, String authorName, int numberOfPages,
             String summary, String publisher, String mainPage, double cost, 
             int quantity, String genre) {
            
-        super(bookName, isbn, authorName, numberOfPages, summary, publisher, mainPage, cost, quantity, genre);
+        super(checked,isItAvailable, bookName, isbn, authorName, numberOfPages, summary, publisher, mainPage, cost, quantity, genre);
     }   
 }

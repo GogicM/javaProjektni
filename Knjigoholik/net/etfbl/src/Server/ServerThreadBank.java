@@ -5,15 +5,19 @@
  */
 package Server;
 
+import static Server.ServerBank.kursnaLista;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.net.Socket;
 import java.util.HashMap;
+import java.util.Random;
 
 /**
  *
@@ -31,20 +35,15 @@ public class ServerThreadBank extends Thread {
 //            this.value = value;
 //        }
 //    }
-    public static final HashMap kursnaLista = new HashMap();
+    public static final HashMap<String, Double> kursnaLista = new HashMap<String,Double>();
     public ServerThreadBank(Socket socket, int value) {
         this.socket = socket;
         this.value = value;
         try{
+              // inicijalizuj izlazni stream
+            out = new ObjectOutputStream(socket.getOutputStream());
             // inicijalizuj ulazni stream
-            in = new BufferedReader(
-                    new InputStreamReader(
-                            socket.getInputStream()));
-            // inicijalizuj izlazni stream
-            out = new PrintWriter(
-                    new BufferedWriter(
-                            new OutputStreamWriter(
-                                    socket.getOutputStream())), true);
+            in = new ObjectInputStream(socket.getInputStream());
         } catch(Exception e) {
             e.printStackTrace();
         }
@@ -56,16 +55,29 @@ public class ServerThreadBank extends Thread {
              same poruke izvrsi odredjenu akciju, i vrati klijentu odgovor*/
             // procitaj zahtjev
             BufferedReader input = new BufferedReader(new FileReader("src/Server/moneyBalance.txt"));          
-            String request = in.readLine();
+            String request = (String)in.readObject();
             if(userNameValidation(request)) {
                 System.out.println(request);
-                out.println(getAccountName(request));
-                out.println(getAccountBalance(request));
-                out.println(getAccountCurrency(request));
+                out.writeObject(getAccountName(request));
+                out.writeObject(getAccountBalance(request));
+                out.writeObject(getAccountCurrency(request));
             }
             else {
-                 out.println("Greska");
-            }     
+                 out.writeObject("Greska");
+            }
+            if(request.startsWith("courseList")) {
+                Random r = new Random();
+                while(true) {
+                    double rangeMin = 1.2;
+                    double rangeMax = 8.2;
+                    double randNumber = rangeMin + (rangeMax - rangeMin) * r.nextDouble();
+                    kursnaLista.put("EUR", randNumber);
+                    kursnaLista.put("HRK", randNumber);
+                    kursnaLista.put("USD", randNumber);
+                    kursnaLista.put("NOK", randNumber);
+                    out.writeObject(kursnaLista);
+                }
+            }
             in.close();
             out.close();
             socket.close();
@@ -141,6 +153,7 @@ public class ServerThreadBank extends Thread {
     private Socket socket;
     //redni broj klijenta
     private int value;
-    private BufferedReader in;
-    private PrintWriter out;
+    private ObjectOutputStream out;
+    private ObjectInputStream in;
+
 }

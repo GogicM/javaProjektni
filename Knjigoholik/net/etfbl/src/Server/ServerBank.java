@@ -3,6 +3,7 @@ package Server;
 
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.HashMap;
 
 /**
  *
@@ -10,6 +11,7 @@ import java.net.Socket;
  */
 public class ServerBank {
     public static final int TCP_PORT_BANK = 9500;
+    public static final HashMap<String, Double> kursnaLista = new HashMap<String,Double>();
     
     public static void main(String[] args) {
         try{
@@ -26,5 +28,10 @@ public class ServerBank {
             e.printStackTrace();
         }
     }
-    
+    public static void populateKursnaLista() {
+    kursnaLista.put("EUR", 1.95);
+    kursnaLista.put("HRK", 0.26);
+    kursnaLista.put("USD", 1.75);
+    kursnaLista.put("NOK", 0.209);
+    }
 }

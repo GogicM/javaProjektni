@@ -71,4 +71,10 @@ public class Korisnik {
     public String getPassword() {
         return password;
     }
+    
+    public String toString() {
+        return "IME:" + getName() + "\nKORISNICKO IME: " + getUserName() +
+                "\nSTANJE NA RACUNU: " + getAccountBalance() +
+                "\nVALUTA: " + getCurrency();
+    }
 }
