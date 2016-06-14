@@ -2,7 +2,7 @@ package Server;
 
 import Knjiga.ElektronskaKnjiga;
 import Knjiga.Knjiga;
-import Knjiga.PisanaKnjiga;
+import Knjiga.ElektronskaKnjiga;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -22,11 +22,15 @@ public class Server {
     public static final String path = "src/Knjiga/Opis/";
     public static Knjiga[] listaKnjiga;
     public static ArrayList<Knjiga> bookList = new ArrayList<Knjiga> ();
+    public static ArrayList<Knjiga> songOfIceAndFire = new ArrayList<Knjiga>();
+    public static ArrayList<Knjiga> lotr = new ArrayList<Knjiga>();
+    public static ArrayList<Knjiga> serijali = new ArrayList<Knjiga>();
+
     public static void main(String[] args) {
         init();
         //serijalizacija kolekcija knjiga
         try{
-            FileOutputStream fos = new FileOutputStream("src/Server/Knjiga");
+            FileOutputStream fos = new FileOutputStream("F:/Java/Gogic Milan 63-08/Knjigoholik/net/etfbl/src/Server/Knjiga/bookList.dat");
             ObjectOutputStream oos1 = new ObjectOutputStream(fos);
             oos1.writeObject(bookList);
             oos1.close();
@@ -55,7 +59,6 @@ public class Server {
         //pomocna metoda u kojoj cu kreirati 20 knjiga, dodati u arraylist u
     //eventualno ih rasporediti u serijale (imam Pesme leda i vatre i Gospodar prstenova
     public static void init() {
-        HashMap bookHash = new HashMap();
         ArrayList<Knjiga> serijali = new ArrayList<>();
         ArrayList<String> txtSummary = new ArrayList<>();
         String summary;
@@ -81,50 +84,50 @@ public class Server {
         txtSummary.add("tvrdjava.txt");
 
         try {
-        PisanaKnjiga pBasara = new PisanaKnjiga(false, true, "Fama o biciklistima", "978-86-521-1090-2", "Svetislav Basara",
-        334," ","Dereta", "src/GUI/Images/basara.jpg", 16.50, 3, "filozofsko - religijski roman, istorijska");
+        ElektronskaKnjiga eBasara = new ElektronskaKnjiga(false, true, "Fama o biciklistima", "978-86-521-1090-2", "Svetislav Basara",
+        334," ","Dereta", "src/GUI/Images/basara.jpg", 16.50, 20, "filozofsko - religijski roman, istorijska");
         //pomocu setera iz klase Knjiga, postavljam opis za odredjenu knjigu citajuci ga iz fajla i konvertujuci u string
         //moje "elegantno" rjesenje se malo zakomplikovalo :)
-        pBasara.setSummary(Knjiga.fromFileToString(new File(path + txtSummary.get(0))));
+        eBasara.setSummary(Knjiga.fromFileToString(new File(path + txtSummary.get(0))));
 
-        PisanaKnjiga pIgraPrestola = new PisanaKnjiga(false, true, "Igra prestola", "978-86-743-6099-6", "Dzordz R.R. Martin",
-        599,"","Laguna", "src/GUI/Images/igra_prestola.jpg", 20 , 2, "epska fantastika, politicka strategija");
-        pIgraPrestola.setSummary(Knjiga.fromFileToString(new File(path + txtSummary.get(7))));
+        ElektronskaKnjiga eIgraPrestola = new ElektronskaKnjiga(false, true, "Igra prestola", "978-86-743-6099-6", "Dzordz R.R. Martin",
+        599,"","Laguna", "src/GUI/Images/igraPrestola.jpg", 20 , 2, "epska fantastika, politicka strategija");
+        eIgraPrestola.setSummary(Knjiga.fromFileToString(new File(path + txtSummary.get(7))));
 
-        PisanaKnjiga pSudarKraljeva = new PisanaKnjiga(false, true,"Sudar Kraljeva", "978-86-743-6140-5", "Dzordz R.R. Martin",
+        ElektronskaKnjiga eSudarKraljeva = new ElektronskaKnjiga(false, true,"Sudar Kraljeva", "978-86-743-6140-5", "Dzordz R.R. Martin",
         672,"","Laguna", "src/GUI/Images/sudar_kraljeva.jpg", 26.20 , 2, "epska fantastika, politicka strategija");
-        pSudarKraljeva.setSummary(Knjiga.fromFileToString(new File(path + txtSummary.get(18))));
+        eSudarKraljeva.setSummary(Knjiga.fromFileToString(new File(path + txtSummary.get(18))));
 
-        PisanaKnjiga pOlujaMaceva = new PisanaKnjiga(false, true, "Oluja maceva -deo prvi: Celik i sneg", "978-86-743-6185-6", "Dzordz R.R. Martin",
+        ElektronskaKnjiga eOlujaMaceva = new ElektronskaKnjiga(false, true, "Oluja maceva -deo prvi: Celik i sneg", "978-86-743-6185-6", "Dzordz R.R. Martin",
         384,"","Laguna", "src/GUI/Images/oluja_maceva.jpg", 20.50 , 2, "epska fantastika, politicka strategija");
-        pOlujaMaceva.setSummary(Knjiga.fromFileToString(new File(path + txtSummary.get(12))));
+        eOlujaMaceva.setSummary(Knjiga.fromFileToString(new File(path + txtSummary.get(12))));
 
-        PisanaKnjiga pGozbaZaVrane = new PisanaKnjiga(false, true,"Gozba za vrane -deo prvi", "978-86-743-6449-9", "Dzordz R.R. Martin",
+        ElektronskaKnjiga eGozbaZaVrane = new ElektronskaKnjiga(false, true,"Gozba za vrane -deo prvi", "978-86-743-6449-9", "Dzordz R.R. Martin",
         362,"","Laguna", "src/GUI/Images/gozba_za_vrane.jpg", 19.50 , 2, "epska fantastika, politicka strategija");
-        pGozbaZaVrane.setSummary(Knjiga.fromFileToString(new File(path + txtSummary.get(6))));
+        eGozbaZaVrane.setSummary(Knjiga.fromFileToString(new File(path + txtSummary.get(6))));
 
-        PisanaKnjiga pPlesSaZmajevima = new PisanaKnjiga(false, true,"Ples sa zmajevima -deo prvi", "978-86-521-0914-2", "Dzordz R.R. Martin",
+        ElektronskaKnjiga ePlesSaZmajevima = new ElektronskaKnjiga(false, true,"Ples sa zmajevima -deo prvi", "978-86-521-0914-2", "Dzordz R.R. Martin",
         592,"","Laguna", "src/GUI/Images/ples1.jpg", 22 , 2, "epska fantastika, politicka strategija");
-        pPlesSaZmajevima.setSummary(Knjiga.fromFileToString(new File(path + txtSummary.get(14))));
+        ePlesSaZmajevima.setSummary(Knjiga.fromFileToString(new File(path + txtSummary.get(14))));
 
-        PisanaKnjiga pDruzinaPrstena = new PisanaKnjiga(false, true,"Gospodar prstenova - Druzina prstena", "978-86-747-3506-0", "J.R.R. Tolkin",
+        ElektronskaKnjiga eDruzinaPrstena = new ElektronskaKnjiga(false, true,"Gospodar prstenova - Druzina prstena", "978-86-747-3506-0", "J.R.R. Tolkin",
         429,"","Moc knjige", "src/GUI/Images/druzina_prstena.jpg", 16.70 , 2, "epska fantastika");
-        pDruzinaPrstena.setSummary(Knjiga.fromFileToString(new File(path + txtSummary.get(5))));
+        eDruzinaPrstena.setSummary(Knjiga.fromFileToString(new File(path + txtSummary.get(5))));
 
-        PisanaKnjiga pTvrdjava = new PisanaKnjiga(false, true,"Tvrdjava", "978-86-10-00973-6", "Mesa Selimovic",
+        ElektronskaKnjiga eTvrdjava = new ElektronskaKnjiga(false, true,"Tvrdjava", "978-86-10-00973-6", "Mesa Selimovic",
         335,"","Vulkan", "src/GUI/Images/tvrdjava.jpg", 14.90 , 1, "klasicna knjizevnost");
-        pTvrdjava.setSummary(Knjiga.fromFileToString(new File(path + txtSummary.get(19))));
+        eTvrdjava.setSummary(Knjiga.fromFileToString(new File(path + txtSummary.get(19))));
 
-        PisanaKnjiga pPesme = new PisanaKnjiga(false, true,"Sedam lirskih krugova", "978-86-712-8003-7", "Momcilo Nastasijevic",
+        ElektronskaKnjiga ePesme = new ElektronskaKnjiga(false, true,"Sedam lirskih krugova", "978-86-712-8003-7", "Momcilo Nastasijevic",
         101,"","Kairos", "src/GUI/Images/nastasijevic_pesme.jpg", 17 , 1, "poezija - simbolizam");
-        pPesme.setSummary(Knjiga.fromFileToString(new File(path + txtSummary.get(12))));
+        ePesme.setSummary(Knjiga.fromFileToString(new File(path + txtSummary.get(12))));
 
-        PisanaKnjiga pSlikaDorijanaGreja = new PisanaKnjiga(false, true,"Slika Dorijana Greja", "978-86-10-00558-5", "Oskar Vajld",
+        ElektronskaKnjiga eSlikaDorijanaGreja = new ElektronskaKnjiga(false, true,"Slika Dorijana Greja", "978-86-10-00558-5", "Oskar Vajld",
         292,"","Vulkan", "src/GUI/Images/dorijan.jpg", 17 , 4, "filozofska fikcija, klasicna knjizevnost");
-        pSlikaDorijanaGreja.setSummary(Knjiga.fromFileToString(new File(path + txtSummary.get(4))));
+        eSlikaDorijanaGreja.setSummary(Knjiga.fromFileToString(new File(path + txtSummary.get(4))));
 
         ElektronskaKnjiga eCuvari = new ElektronskaKnjiga(false, true,"Cuvari", "978-09-302-8923-2", "Alan Mur",
-        464,"","Fibra", "src/GUI/Images/basara.jpg", 85 , 2, "graficke novele");
+        464,"","Fibra", "src/GUI/Images/cuvari.jpg", 85 , 2, "graficke novele");
         eCuvari.setSummary(Knjiga.fromFileToString(new File(path + txtSummary.get(2))));
 
         ElektronskaKnjiga eBukaIBes = new ElektronskaKnjiga(false, true,"Buka i Bes", "978-09-302-8923-2", "Vilijam Fokner",
@@ -153,7 +156,7 @@ public class Server {
         ePrice.setSummary(Knjiga.fromFileToString(new File(path + txtSummary.get(15))));
 
         ElektronskaKnjiga eLamentNadBeogradom = new ElektronskaKnjiga(false, true,"Lament nad Beogradom", "978-86-815-6719-7", "Milos Crnjanski",
-        192,"","Tanesi", "src/GUI/Images/lament.jpg", 42 , 1, "poezija");
+        192,"","Tanesi", "src/GUI/Images/lament.jpg", 42 , 2, "poezija");
         eLamentNadBeogradom.setSummary(Knjiga.fromFileToString(new File(path + txtSummary.get(9))));
 
         ElektronskaKnjiga eLelejskaGora = new ElektronskaKnjiga(false, true,"Lelejska gora", "978-86-010-1734-4", "Mihajlo Lalic",
@@ -164,19 +167,16 @@ public class Server {
         524,"","Nova knjiga", "src/GUI/Images/psihoanaliza.jpg", 54 , 2, "psihoanaliza");
         ePsihoanaliza.setSummary(Knjiga.fromFileToString(new File(path + txtSummary.get(17))));
 
+//        ElektronskaKnjiga eSerijalPesmeLedaIVatre =  = new ElektronskaKnjiga(false, true,"Pesme leda i vatre", "", "Dzordz.R.R. Martin",
+//        3000,"","Laguna", "src/GUI/Images/psihoanaliza.jpg", 54 , 2, "epska fantastika, politicka strategija");
+//        ePsihoanaliza.setSummary(Knjiga.fromFileToString(new File(path + txtSummary.get(17))));
         //dodavanje u listu koja ce sluziti za pretragu po naslovu
-        listaKnjiga = new Knjiga[]{ pBasara, pIgraPrestola, pSudarKraljeva, pOlujaMaceva, pGozbaZaVrane, pPlesSaZmajevima,
-        pDruzinaPrstena, pTvrdjava, pPesme, pSlikaDorijanaGreja, eCuvari, eBukaIBes, eDemijan, eDvijeKule, ePovratakKralja,
+        listaKnjiga = new Knjiga[]{ eBasara, eIgraPrestola, eSudarKraljeva, eOlujaMaceva, eGozbaZaVrane, ePlesSaZmajevima,
+        eDruzinaPrstena, eTvrdjava, ePesme, eSlikaDorijanaGreja, eCuvari, eBukaIBes, eDemijan, eDvijeKule, ePovratakKralja,
         eNarcisIZlatousti, ePrice, eLamentNadBeogradom, eLelejskaGora, ePsihoanaliza };
         Collections.addAll(bookList, listaKnjiga);
-        serijali.add(pIgraPrestola);
-        serijali.add(pSudarKraljeva);
-        serijali.add(pOlujaMaceva);
-        serijali.add(pGozbaZaVrane);
-        serijali.add(pPlesSaZmajevima);
-        serijali.add(pDruzinaPrstena);
-        serijali.add(eDvijeKule);
-        serijali.add(ePovratakKralja);
+
+
         } catch(Exception e) {
             e.printStackTrace();
         }

@@ -1,2 +1,5 @@
 mgogic#545#KM
 java#250#EUR
+student#600#USD
+user#600#HRK
+milan#600#NOK

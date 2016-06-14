@@ -5,13 +5,11 @@
  */
 package Server;
 
-import Knjiga.ElektronskaKnjiga;
 import Knjiga.Knjiga;
-import Knjiga.PisanaKnjiga;
 import java.io.*;
 import java.net.*;
 import java.util.ArrayList;
-import javafx.scene.image.Image;
+import java.util.Random;
 
 /**
  *
@@ -19,11 +17,11 @@ import javafx.scene.image.Image;
  */
 public class ServerThread extends Thread {
     
-    private ObjectOutputStream oos;    
-    private ObjectInputStream ois;
+    public ObjectOutputStream oos;    
+    public ObjectInputStream ois;
     //lista knjiga trazenih od korisnika prilikom pretrage
     ArrayList<Knjiga> lista = new ArrayList<>();
-    //lista knjiga za trazenih za iznajmljivanje
+    //lista knjiga  trazenih za iznajmljivanje
     ArrayList<Knjiga> forRent = new ArrayList<>();
     
     public ServerThread(Socket sock, int value) {
@@ -45,7 +43,7 @@ public class ServerThread extends Thread {
              same poruke izvrsi odredjenu akciju, i vrati klijentu odgovor*/
             // procitaj zahtjev
             String request = (String)ois.readObject();
-            
+            sock.setKeepAlive(true);
             if(request.startsWith("LOGIN")){
                 String[] loginElements = request.split("#");
                 System.out.println(request);
@@ -56,19 +54,56 @@ public class ServerThread extends Thread {
                 }
             }
             //obrada zahtjeva za pretragu knjige
+            if(request.startsWith("RENT")) {
+                String[] strings = request.split("#");
+                System.out.println(strings[0] + " " + strings[1]);
+                for(int i = 0; i < Server.bookList.size(); i++) {  
+                    if(Server.bookList.get(i).getBookName().equals(strings[1]) &&
+                        Server.bookList.get(i).getIsItAvailable()) {
+                        oos.writeObject("OK");
+                      //  oos.flush();
+                        Server.bookList.get(i).setIsItAvailable(false);
+                        Knjiga knjiga = Server.bookList.get(i);
+                        try {
+                            Random r = new Random();
+                            int rand = r.nextInt(8000) + 3000;
+                            sleep(rand);
+                        } catch(Exception e) {
+                            e.printStackTrace();
+                            
+                        }
+                        Server.bookList.get(i).setIsItAvailable(true);
 
+                      System.out.println("Poslije treda: " + Server.bookList.get(i).toString());
+                    } 
+                    if(!Server.bookList.get(i).getIsItAvailable()) {
+                        oos.writeObject("ERROR" + "#" + Server.bookList.get(i).getBookName());
+                        while(!Server.bookList.get(i).getIsItAvailable()) {
+                            try {
+                                sleep(500);
+                            } catch(Exception e) {
+                                e.printStackTrace();
+                            }                           
+                        }
+                        oos.writeObject("AVAILABLE" + "#" + Server.bookList.get(i).getBookName());
+                        
+                    }
+//                    else {
+//                        oos.writeObject("AVAILABLE" + "#" + Server.bookList.get(i).getBookName());
+//                        oos.flush();
+//                                }
+                }
+            }
             
             if(request.startsWith("SEARCH")) {
                 String[] s = request.split("#");
-            for(Knjiga k : Server.listaKnjiga) { //for petljom kroz listu knjiga
-                if(s[1].equals(k.getAuthorName()) || k.getAuthorName().startsWith(s[1]) || //provejra da li u listi ima knjige
+                for(Knjiga k : Server.listaKnjiga) { //for petljom kroz listu knjiga
+                    if(s[1].equals(k.getAuthorName()) || k.getAuthorName().startsWith(s[1]) || //provejra da li u listi ima knjige
                         k.getAuthorName().endsWith(s[1]) || s[1].equals(k.getBookName()) ||//od unesenog autora
                          k.getBookName().startsWith(s[1]) || s[1].equals(k.getGenre()) || // zanra, ili naziva...
                                 k.getGenre().startsWith(s[1]) || k.getGenre().endsWith(s[1])) { //&&!s[2].equals(null) || s[2].startsWith(k.getGenre()) || s[2].endsWith(k.getGenre())) {
-                    lista.add(k); 
-                    System.out.println(k.getGenre());
-                    System.out.println(lista.get(0).toString());
-                }
+                        lista.add(k); 
+                    }
                 }
             if(!lista.isEmpty()) {
              oos.writeObject(lista);
@@ -76,10 +111,16 @@ public class ServerThread extends Thread {
             }
             else {
                 oos.writeObject(null);
+                oos.flush();
             }
             }
-//            if(request.startsWith("RENT")) {
-//                
+//            if(request.startsWith("DELETE")) {
+//                String strings[] = request.split("#");
+//                for(int i = 0; i < Server.bookList.size(); i++) {
+//                    if(Server.bookList.get(i).getBookName().equals(strings[1])) {
+//                        Server.bookList.remove(Server.bookList.get(i));
+//                    }
+//                }
 //            }
             oos.close();
             ois.close();
@@ -105,6 +146,7 @@ public class ServerThread extends Thread {
                     }
                 }
             }
+            in.close();
         } catch (IOException ex) {
             ex.printStackTrace();
         }

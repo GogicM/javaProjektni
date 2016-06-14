@@ -5,16 +5,15 @@
  */
 package Server;
 
-import static Server.ServerBank.kursnaLista;
+import GUI.Knjigoholik;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
+import java.io.File;
 import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.io.OutputStreamWriter;
-import java.io.PrintWriter;
 import java.net.Socket;
 import java.util.HashMap;
 import java.util.Random;
@@ -24,17 +23,7 @@ import java.util.Random;
  * @author Milan
  */
 public class ServerThreadBank extends Thread {
-//    public enum Currency {
-//        EUR(1.95),
-//        BAM(1),
-//        HRK(3.84),
-//        USD(1.75),
-//        NOK(0.20);
-//        private double value;
-//        private Currency(double value) {
-//            this.value = value;
-//        }
-//    }
+
     public static final HashMap<String, Double> kursnaLista = new HashMap<String,Double>();
     public ServerThreadBank(Socket socket, int value) {
         this.socket = socket;
@@ -54,29 +43,51 @@ public class ServerThreadBank extends Thread {
             /*klijent posalje zahtjev, u vidu neke poruke, server ocita zahtjev, u zavisnosti od 
              same poruke izvrsi odredjenu akciju, i vrati klijentu odgovor*/
             // procitaj zahtjev
-            BufferedReader input = new BufferedReader(new FileReader("src/Server/moneyBalance.txt"));          
+            BufferedReader input = new BufferedReader(new FileReader("src/Server/moneyBalance.txt"));   
+           // BufferedWriter bw = new BufferedWriter(new FileWriter(new File("src/Server/moneyBalance.txt")));
+            
             String request = (String)in.readObject();
             if(userNameValidation(request)) {
                 System.out.println(request);
                 out.writeObject(getAccountName(request));
                 out.writeObject(getAccountBalance(request));
                 out.writeObject(getAccountCurrency(request));
+                System.out.println(getAccountName(request));
+                Knjigoholik.user.setAccountBalance(Double.parseDouble(getAccountBalance(request)));
+                Knjigoholik.user.setCurrency(getAccountCurrency(request));
+                                Knjigoholik.user.setUserName(getAccountName(request));
+
             }
+//            if(request.startsWith("QUANTITY")) {
+//                String strings[] = request.split("#");
+//                bw.write(strings[1]);
+//            }
             else {
                  out.writeObject("Greska");
             }
             if(request.startsWith("courseList")) {
                 Random r = new Random();
-                while(true) {
-                    double rangeMin = 1.2;
-                    double rangeMax = 8.2;
-                    double randNumber = rangeMin + (rangeMax - rangeMin) * r.nextDouble();
-                    kursnaLista.put("EUR", randNumber);
-                    kursnaLista.put("HRK", randNumber);
-                    kursnaLista.put("USD", randNumber);
-                    kursnaLista.put("NOK", randNumber);
-                    out.writeObject(kursnaLista);
-                }
+                System.out.println(request);
+
+//                new Thread() {
+//                    public void run() {
+//                        try{
+                            double rangeMin = 1.2;
+                            double rangeMax = 8.2;
+                            double randNumber = rangeMin + (rangeMax - rangeMin) * r.nextDouble();
+                            ServerBank.kursnaLista.put("EUR", randNumber);
+                            ServerBank.kursnaLista.put("HRK", randNumber);
+                            ServerBank.kursnaLista.put("USD", randNumber);
+                            ServerBank.kursnaLista.put("NOK", randNumber);
+                            out.writeObject(ServerBank.kursnaLista);
+
+//                            Thread.sleep(2000);
+//                        } catch(Exception e) {
+//                            e.printStackTrace();
+//                        }
+//                    }
+//            }.start();
+                
             }
             in.close();
             out.close();
@@ -96,6 +107,7 @@ public class ServerThreadBank extends Thread {
                 c = s.split("#")[0];
                 }
             }
+            //input.close();
         } catch (IOException ex) {
             ex.printStackTrace();
         }
@@ -111,6 +123,7 @@ public class ServerThreadBank extends Thread {
                 c = s.split("#")[1];
                 }
             }
+            input.close();
         } catch (IOException ex) {
             ex.printStackTrace();
         }
@@ -127,7 +140,7 @@ public class ServerThreadBank extends Thread {
                     c = s.split("#")[2];
                 }
             }
-            
+            input.close();
         } catch (IOException ex) {
             ex.printStackTrace();
         }
@@ -145,6 +158,7 @@ public class ServerThreadBank extends Thread {
                     }
                 }
             }
+            in.close();
         } catch (IOException ex) {
             ex.printStackTrace();
         }

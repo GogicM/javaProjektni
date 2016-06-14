@@ -7,25 +7,25 @@ package GUI;
 
 import Knjiga.Knjiga;
 import Korisnik.Korisnik;
+import Server.Server;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.FilenameFilter;
+import java.io.FileWriter;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.io.OutputStream;
 import java.net.InetAddress;
 import java.net.Socket;
+import java.nio.file.Files;
+import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import javafx.geometry.Insets;
 import javafx.application.Application;
-import javafx.beans.property.SimpleObjectProperty;
-import javafx.beans.property.SimpleStringProperty;
-import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
@@ -37,7 +37,6 @@ import javafx.scene.control.Alert.AlertType;
 import javafx.scene.control.Label;
 import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
-import javafx.scene.control.ContentDisplay;
 import javafx.scene.control.TextField;
 import javafx.scene.control.PasswordField;
 import javafx.scene.control.TableCell;
@@ -49,12 +48,9 @@ import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import javafx.scene.text.Text;
 import javafx.stage.Stage;
-import javafx.scene.control.TableColumnBuilder;
-import javafx.scene.control.TableViewBuilder;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
-import javafx.scene.image.ImageViewBuilder;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.paint.Color;
 import javafx.util.Callback;
@@ -64,7 +60,7 @@ import javafx.util.Callback;
  * @author Milan
  */
 public class Knjigoholik extends Application {
-    
+
     GridPane grid;
     GridPane gridMain;
     GridPane gridTable;
@@ -94,27 +90,57 @@ public class Knjigoholik extends Application {
     Button backFromSearch;
     Button buy;
     Button rent;
+    Button download;
     Stage stage;
     TableView table;
+
+    public static Korisnik user;
+    //lista from server se stalno cisti,
+    //da bi prilikom svakog poziva bile samo aktuelne knjige, a ne i one koje smo prije pretrazivali
     public static ArrayList<Knjiga> fromServer = new ArrayList<>();
+    //knjige koje selektujemo u checkbox u, takodje se cisti lista da pamti samo trenutno selektovane
     public static ArrayList<Knjiga> purchasedBooks = new ArrayList<>();
     public static ArrayList<Knjiga> myCatalogue = new ArrayList<>();
-    //ovo ce ici drugacije, sad je probba
-    //Kako se kupi neka knjiga, onda ce se u ovu listu stavljati preko get metode iz maticne klase
+    public static ArrayList<Knjiga> userCatalogue = new ArrayList<>();
+    // kursna lista
+    public HashMap<String, Double> courseList = new HashMap<String, Double>();
     public static final int TCP_PORT = 9000;
     public static final int TCP_PORT_BANK = 9500;
-    public static <T> void refresh(final TableView<T> table, final List<T> tableList) { 
-        //Wierd JavaFX bug 
-        table.setItems(null); 
-        table.layout(); 
-        table.setItems(FXCollections.observableList(tableList)); 
-}    
+    //helper metoda za osvjezavanje podataka u tabeli
+    public static <T> void refresh(final TableView<T> table, final List<T> tableList) {
+        //Wierd JavaFX bug
+        table.setItems(null);
+        table.layout();
+        table.setItems(FXCollections.observableList(tableList));
+  }
+    public void setCourseList() {
+        try {
+            InetAddress addr = InetAddress.getByName("127.0.0.1");
+            Socket sock = new Socket(addr, TCP_PORT_BANK);
+            ObjectOutputStream out = new ObjectOutputStream(sock.getOutputStream());
+            ObjectInputStream in = new ObjectInputStream(sock.getInputStream());
+            
+            out.writeObject("courseList");
+            Map list = new HashMap();
+            list = (HashMap) in.readObject();
+            courseList.putAll(list);
+            Set set = courseList.entrySet();
+            Iterator i = set.iterator();
+            while(i.hasNext()) {
+                Map.Entry me = (Map.Entry)i.next();
+                System.out.println(me.getKey() + ": " +me.getValue());
+            }
+        } catch(Exception e) {
+            e.printStackTrace();
+        }
+    }
     @Override
     public void start(Stage primaryStage) throws IOException, FileNotFoundException {
         //za usera postavljamo 0 stanje, kao i prazno korisnicko ime , valuta i sifra
         //kada dobijemo info sa servera, tada setujemo te vrijednosti
         //#server #joy #objectparadigm #this that :D
-        Korisnik user = new Korisnik("Milan Gogic", 0, "", "", "");
+//        setCourseList();
+        user = new Korisnik("Milan Gogic", 0, "", "", "");
         stage = primaryStage;
         //postavljamo izgled, u nasem slucaju grid sa redovima i kolonama
         grid = new GridPane();
@@ -122,39 +148,39 @@ public class Knjigoholik extends Application {
         grid.setHgap(10); //prostor izmedju redova i kolona
         grid.setVgap(10);
         grid.setPadding(new Insets(25, 25, 25, 25)); //prostor koji grid zauzima u pikselima
-        
-       
+
+
         sceneFirst = new Scene(grid, 300, 275); //kreiramo scenu, povrsinu sa gridom kao glavnim nodom
         primaryStage.setScene(sceneFirst); //setujemo scenu
-        
+
         title = new Text("Dobrodosli"); //tekst u aplikaciji
         title.setFont(Font.font("Tahoma", FontWeight.NORMAL, 20));//font
         grid.add(title, 1, 0, 2, 1); //dodajemo naslov u grid kolona 2, red 1
-        
+
         userName = new Label("User name: "); //labela sa tekstom
         grid.add(userName, 0, 1); //dodajemo u grid
-        
+
         textField = new TextField(); //polje za unos teksta
         textField.setPromptText("Unesite korisnicko ime");
         grid.add(textField, 1, 1);
-        
-                
+
+
         password = new Label("Password: "); //labela za sifru
         grid.add(password , 0, 2);
-        
+
         passwordField = new PasswordField(); //polje za unos sifre
         passwordField.setPromptText("Unesite sifru");
         grid.add(passwordField, 1, 2);
         final Label wrongLogin = new Label();
         grid.add(wrongLogin, 1, 3);
         signIn = new Button("Prijavi se"); //login dugme
-        HBox hbox = new HBox(10); 
+        HBox hbox = new HBox(10);
         hbox.setAlignment(Pos.BOTTOM_RIGHT);
         hbox.getChildren().add(signIn);
         grid.add(hbox, 1, 4);
         //obrada dogadjaja
         //kada kliknemo na dugme za logovanje
-        //definisemo akciju koja ce se desiti 
+        //definisemo akciju koja ce se desiti
         signIn.setOnAction(new EventHandler<ActionEvent>() {
         @Override
         public void handle(ActionEvent event) {
@@ -175,7 +201,9 @@ public class Knjigoholik extends Application {
                 // ako se ispravno loguje, tek tada postavljam ta dva polja na osnovu teksta iz tekst i password polja
                 user.setUserName(textField.getText());
                 user.setPassword(passwordField.getText());
+                
                 stage.setScene(sceneMain);
+//                setCourseList();
             }
                 else {
                     wrongLogin.setText("Incorrect username or password.");
@@ -185,15 +213,15 @@ public class Knjigoholik extends Application {
                     }
                 in.close();
                 out.close();
-                sock.close();    
+                sock.close();
             }catch (Exception e1) {
                     e1.printStackTrace();
-                } 
-             
+                }
+
                 //za regulisanje kursne liste, pitati asistente
 //            Timer timer = new java.util.Timer();
 //
-//            timer.schedule(new TimerTask() {
+//            new Timer.schedule(new TimerTask() {
 //                public void run() {
 //                    Platform.runLater(new Runnable() {
 //                        public void run() {
@@ -214,13 +242,13 @@ public class Knjigoholik extends Application {
 //                                System.out.println(lista.toString());
 //                            } catch(Exception e) {
 //                                e.printStackTrace();
-//                            }                        
+//                            }
 //                        }
 //                    });
 //                }
 //            }, 0, 20000);
          }
-        }); 
+        });
 
         //elementi za drugi prozor, poslije logovanja
         search = new Label("Pretraga: ");
@@ -235,7 +263,7 @@ public class Knjigoholik extends Application {
         gridMain.setPadding(new Insets(0, 10, 0, 10));
         searchBar = new TextField(); //tekst polje u koje upisujemo pretragu
         searchBar.setPrefColumnCount(5);
-        searchBar.setPromptText("Pretraga po zanru ili naslovu"); 
+        searchBar.setPromptText("Pretraga po zanru ili naslovu");
         //dodavanje u grid
         gridMain.add(titleMain, 1, 0, 1, 1);
         gridMain.add(search, 0, 1);
@@ -243,7 +271,7 @@ public class Knjigoholik extends Application {
         gridMain.add(search1, 1, 5);
         buttonSearch = new Button("Pretrazi");
         buttonSearch.setLayoutX(50);
-        HBox hbox1 = new HBox(10); 
+        HBox hbox1 = new HBox(10);
         hbox1.getChildren().add(buttonSearch); //dodavanje dugmeta u hbox, stavljanje naziva, pozicioniranje
         gridMain.add(hbox1, 1, 4);
         backFromSearch = new Button("Nazad"); //pravimo potrebnu dugmad
@@ -256,13 +284,6 @@ public class Knjigoholik extends Application {
         buttonSearch.setOnAction(new EventHandler<ActionEvent>(){
         @Override
         public void handle(ActionEvent event){
-            //povezivanje na server
-            //slanje zahtjeva za pretragu
-            //server trazi po zanru ili po naslovu
-            //vraca rezultate
-            //kada vrati, aktivira se nova scena koja ce sadrzavati tabelu sa knjigama
-            //check box za odabir kao i dugmad nazad,kupi i iznajmi
-            //za sada samo 
             try {
                 InetAddress addr = InetAddress.getByName("127.0.0.1");
                 Socket socket = new Socket(addr, TCP_PORT);
@@ -275,10 +296,11 @@ public class Knjigoholik extends Application {
                 fromServer.clear();
                 fromServer.addAll((ArrayList<Knjiga>) ois.readObject());
                 list.addAll(fromServer);
-                
+
                 AnchorPane root = new AnchorPane();
                 sceneSearch = new Scene(root, 500, 300);
-                if(fromServer.isEmpty()) {
+                for(Knjiga k : fromServer) {
+                if(fromServer.isEmpty() && !fromServer.contains(k)) {
                     Alert alert = new Alert(AlertType.WARNING);
                     alert.setTitle("Obavjestenje");
                     alert.setHeaderText(null);
@@ -288,33 +310,32 @@ public class Knjigoholik extends Application {
 
                 }
 
-              //  if(list.get(0) instanceof Knjiga) {
-                //sta reci, koju poruku poslati? Kome? :D
+                }
                 TableView<Knjiga> table = new TableView<Knjiga>();
                 ObservableList<Knjiga> data =
                 FXCollections.observableArrayList(list);
                 //koristimo ovo da se rasporedi prostor izmedju postojecih kolona
                 //ili ce od preostalog prostora napraviti jos jednu praznu kolonu
-                table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY); 
+                table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
                 TableColumn<Knjiga, String> nameCol = new TableColumn<Knjiga, String>("Naziv");
                 TableColumn<Knjiga, String> authorCol = new TableColumn<Knjiga, String>("Autor");
                 TableColumn<Knjiga, String> costCol = new TableColumn<Knjiga, String>("Cijena");
                 Callback<TableColumn<Knjiga, Boolean>, TableCell<Knjiga, Boolean>> cellFactory;
                 TableColumn checkCol= new TableColumn<Knjiga, Boolean>();
-                
+
                 table.setItems(data);
                 nameCol.setCellValueFactory(new PropertyValueFactory<Knjiga, String>("bookName"));
                 nameCol.setMinWidth(150);
                 authorCol.setCellValueFactory(new PropertyValueFactory<Knjiga, String>("authorName"));
                 costCol.setCellValueFactory(new PropertyValueFactory<Knjiga, String>("cost"));
-                checkCol.setCellValueFactory(new PropertyValueFactory<Knjiga, Boolean>("checked"));                 
+                checkCol.setCellValueFactory(new PropertyValueFactory<Knjiga, Boolean>("checked"));
                 cellFactory = new Callback<TableColumn<Knjiga, Boolean>, TableCell<Knjiga, Boolean>>() {
                 @Override
-                public TableCell call(final TableColumn param) {
+                public TableCell<Knjiga, Boolean> call(final TableColumn<Knjiga, Boolean> param) {
                      final CheckBox checkBox = new CheckBox();
                      final TableCell cell = new TableCell() {
-                    
-                    @Override
+
+                   // @Override
                     public void updateItem(Object item, boolean empty) {
                         super.updateItem(item, empty);
                         if (item == null) {
@@ -324,41 +345,51 @@ public class Knjigoholik extends Application {
                             checkBox.setDisable(false);
                             checkBox.setSelected(item.equals(true) ? true : false);
                             checkBox.setOnAction((event) -> { // sta se desava kada selektujemo checkbox
+                                Knjiga k =(Knjiga) getTableView().getItems().get(getIndex());                                
                                 if(checkBox.isSelected()) {
-                                    purchasedBooks.clear();
-                                    for(int i = 0; i < fromServer.size(); i++) {
-                                        fromServer.get(i).setChecked(true);
-                                        purchasedBooks.add(fromServer.get(i));
-                                        myCatalogue.add(purchasedBooks.get(i));
-                                        //umanjujemo broj dostupnih knjiga za jedan
-                                        purchasedBooks.get(i).setQuantity(purchasedBooks.get(i).getQuantity() - 1);
+                                        purchasedBooks.clear();
+                                        k.setQuantity(k.getQuantity() - 1);
+                                        k.setChecked(true);
+                                        purchasedBooks.add(k);                                        
+                                        myCatalogue.add(k);
+                                        if(k.getQuantity() == 0) {
+                                            purchasedBooks.remove(k);
+                                            myCatalogue.remove(k);
+                                            Server.bookList.remove(k);
+                                            list.remove(k);
+                                            table.getItems().remove(getIndex());
+                                            refresh(table, list);
+                                        }
                                     }
-                                  //  
-                                    }
+                                else if(!checkBox.isSelected()) {
+                                    k.setChecked(false);
+                                    k.setIsItAvailable(false);
+                                }
+                                  
+//                                    }
 
                             });
-                     //   commitEdit(checkBox.isSelected() ? true : false);
+                        commitEdit(checkBox.isSelected() ? true : false);
                         }
                     }
                 };
                 cell.setGraphic(checkBox);
                 return cell;
             }
-        };     
+        };
                 // System.out.println(myCatalogue.get(0).toString());
-                checkCol.setCellValueFactory(new PropertyValueFactory("checked")); 
+                checkCol.setCellValueFactory(new PropertyValueFactory("checked"));
                 checkCol.setCellFactory(cellFactory);
                 AnchorPane.setTopAnchor(table, 30.0);
                 AnchorPane.setLeftAnchor(table, 10.0);
                 AnchorPane.setRightAnchor(table, 10.0);
                 AnchorPane.setBottomAnchor(table, 10.0);
-           //     refresh(table, data);
+                refresh(table, data);
                 table.getColumns().setAll(nameCol, authorCol, costCol, checkCol);
                 root.getChildren().add(table);
                 root.getChildren().addAll(backFromSearch, buy, rent);
-                
-                stage.setScene(sceneSearch);  
-                
+                stage.setScene(sceneSearch);
+
                 }
                 else {
                     Alert alert = new Alert(AlertType.INFORMATION);
@@ -382,54 +413,202 @@ public class Knjigoholik extends Application {
         buy.setOnAction(new EventHandler<ActionEvent>() {
             @Override
             public void handle(ActionEvent event) {
+                myCatalogue.clear();
                 myCatalogue.addAll(purchasedBooks);
-
-                for(int i = 0; i < myCatalogue.size(); i++){
-                    if(myCatalogue.get(i).getIsItAvailable() && myCatalogue.get(i).getQuantity() > 0) {
+                try {
+                InetAddress addr = InetAddress.getByName("127.0.0.1");
+                Socket socket = new Socket(addr, TCP_PORT);
+                ObjectOutputStream oos = new ObjectOutputStream(socket.getOutputStream());
+                ObjectInputStream ois = new ObjectInputStream(socket.getInputStream());
+                
+                for(Knjiga k : myCatalogue) {
+                    if(k.getIsItAvailable() && k.getQuantity() > 0
+                            && user.getAccountBalance() > k.getCost() && k.getChecked()) { //jos obraditi koja je valuta i pretvoriti
+                        //novac korisnika - cijena knjige
+                        user.setAccountBalance(user.getAccountBalance() - k.getCost());
                         //pravimo direktorijum
-                        File f =new File("src/Knjigoholik/MojKatalog/" + user.getUserName());
+                        File f = new File("src/Korisnik/" + user.getUserName() + "/MojKatalog");
                         f.mkdirs();
                         //umanjujemo kolicinu knjige za jedan
-                        myCatalogue.get(i).setQuantity(myCatalogue.get(i).getQuantity() - 1);
+                        k.setQuantity(k.getQuantity() - 1);
                         //kopiramo u folder korisnika knjigu
-                        String dPath = "src/GUI/MojKatalog/" + user.getUserName()+"/";
-                        String sPath = "src/Server/knjige/" + myCatalogue.get(i).getBookName()+".txt";
+                        String dPath = "src/Korisnik/" + user.getUserName()+"/MojKatalog/"+k.getBookName()+".txt";
+                        String sPath = "src/Server/knjige/" + k.getBookName()+".txt";
+                        userCatalogue.add(k);
                          try {
                              File source = new File(sPath);
                              File destination = new File(dPath);
-                             copyFile(source, destination);
+                             Files.copy(source.toPath(),
+                             destination.toPath(),REPLACE_EXISTING);
                              } catch(IOException e) {
                                     e.printStackTrace();
                              }
+                        Alert alert = new Alert(AlertType.INFORMATION);
+                        alert.setTitle("Obavjestenje");
+                        alert.setHeaderText("KNJIGOHOLIK KAZE :");
+                        alert.setContentText("Uspjesno ste kupili knjigu. Hvala na povjerenju!");
+
+                        alert.showAndWait();
                          }
-                    }
-                
-                Alert alert = new Alert(AlertType.INFORMATION);
+            else if(k.getQuantity() < 1){
+            Alert alert = new Alert(AlertType.WARNING);
                 alert.setTitle("Obavjestenje");
                 alert.setHeaderText("KNJIGOHOLIK KAZE :");
-                alert.setContentText("Uspjesno ste kupili knjigu. Hvala na povjerenju!");
+                alert.setContentText("Nema knjige na stanju!");
 
                 alert.showAndWait();
-                    }
+                Server.bookList.remove(k);
+                
+        }
+            else if(user.getAccountBalance() < k.getCost()) {
+                Alert alert = new Alert(AlertType.WARNING);
+                alert.setTitle("Obavjestenje");
+                alert.setHeaderText("KNJIGOHOLIK KAZE :");
+                alert.setContentText("Nemate dovoljno novca za kupovinu!");
+
+                alert.showAndWait();
+            }
+            else if(myCatalogue.isEmpty() || !k.getChecked()) {
+                Alert alert = new Alert(AlertType.WARNING);
+                alert.setTitle("Obavjestenje");
+                alert.setHeaderText("KNJIGOHOLIK KAZE :");
+                alert.setContentText("Odaberite neku knjigu");
+
+                alert.showAndWait();
             
+            }
+                oos.close();
+                ois.close();
+                socket.close();
+                }
+                } catch(Exception e) {
+                    e.printStackTrace();
+                }
+                    }
+
         });
         rent.setOnAction(new EventHandler<ActionEvent>() {
             @Override
             public void handle(ActionEvent event) {
-                myCatalogue.addAll(purchasedBooks);
-                Alert alert = new Alert(AlertType.INFORMATION);
-                alert.setTitle("Obavjestenje");
-                alert.setHeaderText("KNJIGOHOLIK KAZE :");
-                alert.setContentText("Uspjesno ste iznajmili knjigu.");
+                try {
+                   // myCatalogue.clear();
+                    //  myCatalogue.addAll(purchasedBooks);
+                    InetAddress addr = InetAddress.getByName("127.0.0.1");
+                    Socket socket = new Socket(addr, TCP_PORT);
+                    ObjectOutputStream oos = new ObjectOutputStream(socket.getOutputStream());
+                    ObjectInputStream ois = new ObjectInputStream(socket.getInputStream());
+                    System.out.println(purchasedBooks.toString());
+                    for(int i = 0; i < purchasedBooks.size(); i++) {
+                        if(purchasedBooks.get(i).getChecked()) {
+                            oos.writeObject("RENT" + "#" + purchasedBooks.get(i).getBookName());
+                            String read = (String) ois.readObject();
+                            System.out.println(read);
+                            if(read.equals("OK") && purchasedBooks.get(i).getIsItAvailable()) {
+                                Alert alert = new Alert(AlertType.INFORMATION);
+                                alert.setTitle("Obavjestenje");
+                                alert.setHeaderText("KNJIGOHOLIK KAZE :");
+                                alert.setContentText("Uspjesno ste iznajmili knjigu.");
 
-                alert.showAndWait();
-                //zakljucati knjigu
+                                alert.showAndWait();
+                               // socket.setSoTimeout(10000);
+                                
+                            } else if(read.startsWith("ERROR")){
+                                Alert alert = new Alert(AlertType.WARNING);
+                                alert.setTitle("Obavjestenje");
+                                alert.setHeaderText("KNJIGOHOLIK KAZE :");
+                                alert.setContentText("Knjiga je vec iznajmljena, probajte ponovo za minut");
+                                alert.showAndWait();
+                                
+                                //oos.writeObject("AVAILABLE");
+                                String string = (String) ois.readObject();
+                                System.out.println(string);
+
+                                System.out.println(string);
+                                String strings[] = string.split("#");
+                                Alert alert1 = new Alert(AlertType.INFORMATION);
+                                alert1.setTitle("Obavjestenje");
+                                alert1.setHeaderText("KNJIGOHOLIK KAZE :");
+                                alert1.setContentText("Knjiga " + strings[1] + " je ponovo dostupna za iznajmljivanje.");
+
+                                alert1.showAndWait();
+                               }    
+                        }
+                        
+                    }
+                    oos.close();
+                    ois.close();
+                    socket.close();
+                } catch(Exception e) {
+                    e.printStackTrace();
             }
-        });
-      //  System.out.println( fromServer.get(0));
+            }
+        });                
+        
         //kreiranje dugmeta za prikaz mog kataloga
         catalogue = new Button("Moj katalog");
-        catalogue.setOnAction(e -> ButtonClicked(e));
+        //Definisemo akciju koja se desava klikom na dugme Moj Katalog
+        catalogue.setOnAction(new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent event){
+                //PRavimo table view
+                TableView<Knjiga> table = new TableView<Knjiga>();
+                AnchorPane root = new AnchorPane();                        
+                //Pravimo observable listu, posebna lista koja ima data binding, tj. prati promjene za objekte Klase Knjiga
+                //Prosledjujemo joj listu userCatalogue
+                ObservableList<Knjiga> data = FXCollections.observableArrayList(userCatalogue);
+                table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+                TableColumn<Knjiga, String> imageCol = new TableColumn<Knjiga, String>();
+                TableColumn<Knjiga, String> descriptionCol = new TableColumn<Knjiga, String>();
+                Callback<TableColumn<Knjiga, String>, TableCell<Knjiga, String>> cellFactory;
+                table.setItems(data);
+                
+                back = new Button("Nazad");
+                sceneTable = new Scene(root, 500, 500);
+
+                imageCol.setCellValueFactory(new PropertyValueFactory("mainPage"));
+                descriptionCol.setCellValueFactory(new PropertyValueFactory("summary"));
+                cellFactory = new Callback<TableColumn<Knjiga, String>, TableCell<Knjiga, String>>() {
+                    @Override
+                    public TableCell<Knjiga, String> call(TableColumn<Knjiga, String> param) {
+                         HBox box= new HBox();                         
+                         ImageView imageview = new ImageView();                      
+                         return new TableCell<Knjiga, String> () {
+                            @Override
+                            public void updateItem(String item, boolean empty) {
+                               super.updateItem(item, empty);
+                               if (item != null) {
+                                   box.setSpacing(10) ;
+                                   box.setPadding(new Insets(10, 10, 10, 10));
+                                   Image img = null;
+                                   Knjiga k = getTableView().getItems().get(getIndex());
+                                   img = new Image(new File(k.getMainPage()).toURI().toString());
+
+                                   imageview.setImage(img);
+                                   imageview.setFitHeight(320.0);
+                                   imageview.setFitWidth(200.0);
+
+                               }
+                               // da se ne dodaje dva puta isti node, jer baca IllegalArgumentException
+                               if(!box.getChildren().contains(imageview)) {
+                               box.getChildren().add(imageview);    
+                               setGraphic(box);
+                               }
+                           }
+                         };
+                    }
+                };
+                imageCol.setCellFactory(cellFactory);
+                table.getColumns().addAll(imageCol, descriptionCol);
+                AnchorPane.setTopAnchor(table, 30.0);
+                AnchorPane.setLeftAnchor(table, 10.0);
+                AnchorPane.setRightAnchor(table, 10.0);
+                AnchorPane.setBottomAnchor(table, 10.0);
+                root.getChildren().addAll(table, back);
+                back.setOnAction(e -> ButtonClicked(e));
+
+            stage.setScene(sceneTable);
+            }   
+        });
         hbox1.setAlignment(Pos.BOTTOM_LEFT);
         hbox1.getChildren().add(catalogue);
         accountInfo = new Button("Stanje na racunu");
@@ -446,8 +625,8 @@ public class Knjigoholik extends Application {
         currency = new Label();
         gridAccount.add(accountName, 0, 3);
         gridAccount.add(accountBalance, 0, 5);
-        gridAccount.add(currency, 0, 7);       
-               
+        gridAccount.add(currency, 0, 7);
+
         accountInfo.setOnAction(new EventHandler<ActionEvent>() {
             @Override
             public void handle(ActionEvent event) {
@@ -486,96 +665,46 @@ public class Knjigoholik extends Application {
                         e1.printStackTrace();
                     }
             }
-        }); 
+        });
+        download = new Button("Preuzmite katalog");
+        download.setOnAction(new EventHandler<ActionEvent>(){
+            @Override
+            public void handle(ActionEvent event) {
+                try {
+                    if(!userCatalogue.isEmpty()) {
+                        System.out.println("KORISNIK " + user.getUserName());
+                        System.out.println(userCatalogue.toString());
+                            File file = new File("src/Korisnik/" + user.getUserName() + "/" + "MojKatalog/MojKatalog.txt");
+                            file.createNewFile();
+                            FileWriter writer = new FileWriter(file); 
+                           // System.out.println(k.getSummary());
+                            writer.write(userCatalogue.toString());
+                            writer.write("***********************************");
+                            writer.write("\n");
+                            writer.close();
+                }
+                else {
+                    Alert alert = new Alert(AlertType.INFORMATION);
+                    alert.setTitle("Obavjestenje");
+                    alert.setHeaderText("KNJIGOHOLIK KAZE :");
+                    alert.setContentText("Morate nesto kupiti da bi imali katalog. Viva la Capitalism! :)");
+
+                    alert.showAndWait();
+                }
+            } catch(Exception e) {
+                e.printStackTrace();
+            }
+            }
+        });
+        hbox1.getChildren().add(download);
         backFromAccInfo = new Button("Nazad");
         backFromAccInfo.setOnAction(e -> ButtonClicked(e));
         gridAccount.add(backFromAccInfo, 0, 0);
         //pravljenje tabele, da vidim znam li :D
         //inicijalno ovako, kasnije moram obraditi da samo kupljene knjige budu dodane, bice cirkus sa nazivima i svim :D
-        
-        TableColumn<File, Image> imageColumn = TableColumnBuilder.<File, Image>create().text("").build();
-            imageColumn.setCellValueFactory(new Callback<TableColumn.CellDataFeatures<File, Image>, ObservableValue<Image>>() {
-                @Override
-                public ObservableValue<Image> call(TableColumn.CellDataFeatures<File, Image> p) {
-                    File file = p.getValue();
-                    return new SimpleObjectProperty<>(new Image(file.toURI().toString(), 300, 300, true, true, true));
-                }
-            });
-            imageColumn.setCellFactory(new Callback<TableColumn<File, Image>, TableCell<File, Image>>(){
 
-                @Override
-                public TableCell<File, Image> call(TableColumn<File, Image> p) {
-                    return new TableCell<File, Image>(){
 
-                        @Override
-                        protected void updateItem(Image i, boolean empty) { //pozivamo da bi se postavila tableCell
-                            super.updateItem(i, empty);
-                            setText(null);
-                            setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
-                            ImageView imageView = (i == null || empty) ? null : ImageViewBuilder.create().image(i).build();
-                            setGraphic(imageView);
-                        }                    
-                    };
-                }
-            });
-            //
-            TableColumn<File, String> pathColumn = TableColumnBuilder.<File, String>create().text("").build();
-            pathColumn.setCellValueFactory(new Callback<TableColumn.CellDataFeatures<File, String>, ObservableValue<String>>() {
-                @Override
-                public ObservableValue<String> call(TableColumn.CellDataFeatures<File, String> p) {
-                   String summaryPath = "src/Knjiga/Opis/";
-                   ArrayList<String> list = new ArrayList<>();
-                   list.add("basara.txt");
-                   list.add("buka.txt");
-                   list.add("cuvari.txt");
-                   list.add("demijan.txt");
-                   String string="";
-                   File file = null;
-                   try{
-                   for(int i = 0; i < list.size(); i++)
-                   {    
-                        String path1 = summaryPath + list.get(i);
-                        file = new File(path1);
-                        string = Knjiga.fromFileToString(file);
-                   }
 
-                   } catch(IOException e) { e.printStackTrace();}
-
-                    return new SimpleStringProperty(string); 
-                }
-            });
-
-    TableView<File> tableView = TableViewBuilder.<File>create().columns(imageColumn, pathColumn).columnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY).build();
-
-    String path = "src/GUI/Images";
-    File folder = new File(path);
-    File[] files = folder.listFiles(new FilenameFilter() {
-        @Override
-        public boolean accept(File dir, String name) {
-            return name.endsWith(".jpg") || name.endsWith(".jpeg") || name.endsWith(".png");
-        }
-    });
-    if (files != null) {
-        for (File file : files) {
-            tableView.getItems().add(file);
-        }
-    }
-        
-        //
-        back = new Button("Nazad");
-        back.setOnAction(e -> ButtonClicked(e));
-        AnchorPane root = new AnchorPane();
-        AnchorPane.setTopAnchor(tableView, 30.0);
-        AnchorPane.setLeftAnchor(tableView, 10.0);
-        AnchorPane.setRightAnchor(tableView, 10.0);
-        AnchorPane.setBottomAnchor(tableView, 10.0);
-        root.getChildren().add(tableView);
-        root.getChildren().add(back);
-       // root.add(hbox, 1, 4);
-
- 
-        sceneTable = new Scene(root, 500, 500);
- 
         sceneMain = new Scene(gridMain, 600, 400);
         primaryStage.setTitle("Pocetni prozor");
         primaryStage.setScene(sceneFirst);
@@ -583,13 +712,8 @@ public class Knjigoholik extends Application {
     }
 
 public void ButtonClicked(ActionEvent e) {
-    //prvi dio koda ce provjeravati da li je ispravno korisnicko ime i sifra
-    //ako jeste, otvara se novi prozor, ako nije onda da se ispise poruka o netacnom unosu
-    //za sada, ovako
-    // 
-    if (e.getSource() == catalogue) {
-        stage.setScene(sceneTable);
-    } else if(e.getSource() == back || e.getSource() == backFromAccInfo || e.getSource() == backFromSearch) {
+
+    if(e.getSource() == back || e.getSource() == backFromAccInfo || e.getSource() == backFromSearch) {
         stage.setScene(sceneMain);
     }
     else {
@@ -597,31 +721,17 @@ public void ButtonClicked(ActionEvent e) {
     }
 }
 
- 
-private static void copyFile(File source, File dest)
-		throws IOException {
-	InputStream input = null;
-	OutputStream output = null;
-	try {
-		input = new FileInputStream(source);
-		output = new FileOutputStream(dest);
-		byte[] buf = new byte[1024];
-		int bytesRead;
-		while ((bytesRead = input.read(buf)) > 0) {
-			output.write(buf, 0, bytesRead);
-                }
-		} catch(IOException e) {
-                        e.printStackTrace();
-                        }
-	
-}
+
+
+
+
     /**
      * @param args the command line arguments
      */
     public static void main(String[] args) {
        // ServerThread ser = new ServerThread();
         launch(args);
-        
+
     }
-    
+
 }

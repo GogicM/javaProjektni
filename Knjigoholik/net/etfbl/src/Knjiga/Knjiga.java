@@ -17,7 +17,7 @@ import javafx.scene.image.Image;
  *
  * @author Milan
  */
-public class Knjiga implements Serializable {
+public class Knjiga extends Thread implements Serializable {
     
    // private StringProperty bookName;
     //ubacujem boolean zbog pravljenja checkbox a
@@ -33,7 +33,9 @@ public class Knjiga implements Serializable {
     private double cost;
     private int quantity;
     private String genre;
-
+    public Knjiga() {
+        
+    }
     public Knjiga(boolean checked, boolean isItAvailable, String bookName, String isbn, String authorName, int numberOfPages,
                   String summary, String publisher, String mainPage, double cost,
                   int quantity, String genre) {
@@ -159,9 +161,12 @@ public class Knjiga implements Serializable {
         this.isItAvailable = isItAvailable;
     }
     
+//    public String toString() {
+//        return "AUTOR: " + getAuthorName() + "\nIZDAVAC:" + getPublisher() +
+//                "\nNAZIV:" + getBookName() + "\nCIJENA: " + getCost() + "\nDOSTUPNO: " + getIsItAvailable();
+//    }
     public String toString() {
-        return "AUTOR: " + getAuthorName() + "\nIZDAVAC:" + getPublisher() +
-                "\nNAZIV:" + getBookName() + "\nCIJENA: " + getCost();
+        return "\n" + getSummary() + "\n" + "*************************************\n" + "\n";
     }
     //pomocna funkcija koja vrsi dodavanje teksta iz fajla u string
     // koristimo je u slucaju opisa kog citamo iz tekstualnog fajla
